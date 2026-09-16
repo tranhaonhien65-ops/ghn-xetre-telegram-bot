@@ -1,4 +1,11 @@
 {
-  "notified": {},
-  "last_check": "2026-09-16T15:26:28.875989+07:00"
+  "notified": {
+    "E260916M0BPP0GB_3": {
+      "last_delay": 1,
+      "first_notified_ts": 1789547499.847715,
+      "last_notified_ts": 1789547499.847715,
+      "last_notified_at": "15:31:39"
+    }
+  },
+  "last_check": "2026-09-16T15:34:43.675291+07:00"
 }

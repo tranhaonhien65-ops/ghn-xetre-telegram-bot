@@ -15,42 +15,48 @@
     'use strict';
 
     let lastSentToken = "";
-    const SYNC_URL = "http://localhost:8989/update_token";
+    const CLOUD_SYNC_URL = "https://ghn-xetre-telegram-bot.onrender.com/update_token";
+    const LOCAL_SYNC_URL = "http://localhost:8989/update_token";
+
+    function sendToUrl(url, payload, isCloud = false) {
+        if (typeof GM_xmlhttpRequest !== "undefined") {
+            GM_xmlhttpRequest({
+                method: "POST",
+                url: url,
+                headers: { "Content-Type": "application/json" },
+                data: payload,
+                onload: function(res) {
+                    if (res.status === 200 && isCloud) {
+                        console.log("%c[GHN Bot Cloud Sync] ☁️ Đã đồng bộ Token lên Cloud Render thành công!", "color: #28a745; font-weight: bold;");
+                        showToast("☁️ Đã đồng bộ Token mới lên Cloud Render (24/7)!");
+                    }
+                },
+                onerror: function() {}
+            });
+        } else {
+            fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: payload
+            }).then(r => r.json()).then(data => {
+                if (isCloud) {
+                    showToast("☁️ Đã đồng bộ Token mới lên Cloud Render (24/7)!");
+                }
+            }).catch(() => {});
+        }
+    }
 
     function sendTokenToBot(token) {
         if (!token || token === lastSentToken || token.length < 30) return;
         lastSentToken = token;
 
-        console.log("%c[GHN Bot Sync] Đang đồng bộ Token mới sang Bot...", "color: #0088cc; font-weight: bold;");
-
+        console.log("%c[GHN Bot Sync] Đang đồng bộ Token mới...", "color: #0088cc; font-weight: bold;");
         const payload = JSON.stringify({ token: token });
 
-        if (typeof GM_xmlhttpRequest !== "undefined") {
-            GM_xmlhttpRequest({
-                method: "POST",
-                url: SYNC_URL,
-                headers: { "Content-Type": "application/json" },
-                data: payload,
-                onload: function(res) {
-                    if (res.status === 200) {
-                        console.log("%c[GHN Bot Sync] ✅ Đồng bộ Token thành công!", "color: #28a745; font-weight: bold;");
-                        showToast("✅ Đã đồng bộ Token mới sang Telegram Bot!");
-                    }
-                },
-                onerror: function(err) {
-                    console.warn("[GHN Bot Sync] Chưa mở Bot hoặc không kết nối được localhost:8989");
-                }
-            });
-        } else {
-            fetch(SYNC_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: payload
-            }).then(r => r.json()).then(data => {
-                console.log("%c[GHN Bot Sync] ✅ Đồng bộ Token thành công!", "color: #28a745; font-weight: bold;");
-                showToast("✅ Đã đồng bộ Token mới sang Telegram Bot!");
-            }).catch(() => {});
-        }
+        // Gửi lên Cloud Render
+        sendToUrl(CLOUD_SYNC_URL, payload, true);
+        // Gửi sang Local (nếu có)
+        sendToUrl(LOCAL_SYNC_URL, payload, false);
     }
 
     function showToast(message) {
