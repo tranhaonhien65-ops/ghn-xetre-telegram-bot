@@ -1,0 +1,68 @@
+==================================================
+🚀 GHN LATE TRUCK MONITOR BOT STARTED
+📍 Bot Token: 8806856427...c-kdw
+👥 Target Group ID: -5311462943
+⏱️ Poll Interval: 60s
+⏳ Delay Threshold: 1m
+🔔 Re-alert Interval: 5 minutes (300s)
+📡 Token Auto-Sync Port: 8989
+==================================================
+📡 Token Auto-Sync Server đang lắng nghe tại http://localhost:8989/update_token
+[14:25:56] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:27:07] Active: 34 | Delayed (>=1m): 1 | Alerts: 1
+[14:28:36] Active: 34 | Delayed (>=1m): 1 | Alerts: 0
+[14:29:23] Active: 34 | Delayed (>=1m): 1 | Alerts: 0
+[14:30:19] Active: 34 | Delayed (>=1m): 1 | Alerts: 0
+[14:31:10] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:32:37] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:33:24] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:35:14] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:36:19] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:36:55] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:37:40] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:38:47] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:41:05] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:41:12] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:42:13] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:43:14] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:44:15] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:45:16] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:46:20] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:47:23] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:48:24] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:49:32] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:50:30] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:51:32] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:52:34] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[14:54:48] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[14:55:20] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[14:55:22] Command from chat -5311462943: /check
+[14:56:18] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[14:57:02] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[14:58:09] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[14:59:10] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:00:21] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:01:22] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:02:23] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:03:27] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:05:31] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:05:50] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[15:09:02] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:10:27] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:12:31] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:13:10] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:13:53] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:15:29] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:16:05] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:17:05] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:18:06] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:19:08] Active: 32 | Delayed (>=1m): 0 | Alerts: 0
+[15:20:10] Active: 32 | Delayed (>=1m): 0 | Alerts: 0
+[15:21:14] Active: 32 | Delayed (>=1m): 0 | Alerts: 0
+[15:22:17] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:23:20] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:24:23] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:25:26] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[15:26:28] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
