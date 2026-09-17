@@ -33,6 +33,7 @@ def analyze_trip_delay(trip: Dict[str, Any], now_dt: datetime, threshold_minutes
     hub = trip.get("hub") or ""
     note = trip.get("note") or ""
     schedule_type = trip.get("schedule_type") or "FIXED"
+    scheduler_name = trip.get("scheduler_name") or trip.get("transport_route_code") or ("Tăng cường" if schedule_type == "EXTRA" else "Lịch trình cố định")
     
     rp_list = trip.get("router_path") or []
     pr_list = trip.get("partner_router") or []
@@ -90,7 +91,8 @@ def analyze_trip_delay(trip: Dict[str, Any], now_dt: datetime, threshold_minutes
                         "expected_time_str": target_eta_out.strftime("%H:%M (%d/%m)"),
                         "delay_minutes": delay_mins,
                         "note": note,
-                        "schedule_type": schedule_type
+                        "schedule_type": schedule_type,
+                        "scheduler_name": scheduler_name
                     }
             break
 
@@ -114,7 +116,8 @@ def analyze_trip_delay(trip: Dict[str, Any], now_dt: datetime, threshold_minutes
                         "expected_time_str": eta_in_dt.strftime("%H:%M (%d/%m)"),
                         "delay_minutes": delay_mins,
                         "note": note,
-                        "schedule_type": schedule_type
+                        "schedule_type": schedule_type,
+                        "scheduler_name": scheduler_name
                     }
             break
 

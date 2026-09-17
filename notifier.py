@@ -38,6 +38,7 @@ def format_single_trip_alert(d: Dict[str, Any]) -> str:
     delay_badge = f"🔴 <b>TRỄ {d['delay_minutes']} PHÚT</b>"
     phone_val = d.get('driver_phone', '')
     phone_str = f"📞 <b>{phone_val}</b>" if phone_val else "Chưa có SĐT"
+    schedule_name = d.get('scheduler_name') or 'Lịch trình cố định'
     
     cta_phone = f"<code>{phone_val}</code>" if phone_val else "tài xế"
     note_line = f"\n📝 <b>Ghi chú:</b> {d['note']}" if d.get('note') else ""
@@ -47,6 +48,7 @@ def format_single_trip_alert(d: Dict[str, Any]) -> str:
         f"🚨 <b>CẢNH BÁO: CHUYẾN XE TRỄ ĐIỂM</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"🚚 <b>Mã chuyến:</b> <code>{d['code']}</code>\n"
+        f"📋 <b>Tên lịch trình:</b> <b>{schedule_name}</b>\n"
         f"🚛 <b>Biển số xe:</b> <b>{d['truck']}</b> (Hub: {d['hub']})\n"
         f"👤 <b>Tài xế:</b> {d['driver_name']} | {phone_str}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
@@ -84,8 +86,9 @@ def format_summary_report(delayed_trips: List[Dict[str, Any]], total_active: int
     
     for i, d in enumerate(delayed_trips, 1):
         phone_part = f" ({d['driver_phone']})" if d['driver_phone'] else ""
+        s_name = d.get('scheduler_name') or 'Lịch trình cố định'
         lines.append(
-            f"<b>{i}. {d['truck']}</b> | <code>{d['code']}</code>\n"
+            f"<b>{i}. {d['truck']}</b> | <code>{d['code']}</code> | Tuyến: <b>{s_name}</b>\n"
             f"   👤 {d['driver_name']}{phone_part}\n"
             f"   👉 Bưu cục: <b>{d['stop_name']}</b> (#{d['stop_num']}/{d['total_stops']})\n"
             f"   ⏱️ Giờ dự kiến: {d['expected_time_str']} ➡️ ⏳ <b>Trễ {d['delay_minutes']}p</b>\n"
