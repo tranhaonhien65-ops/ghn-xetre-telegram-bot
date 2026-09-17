@@ -2,11 +2,15 @@ import os
 import sys
 import threading
 import json
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from config import get_ghn_token, save_ghn_token, load_config
 from bot import run_bot
 
 PORT = int(os.environ.get("PORT", 8080))
+
+class ReusableThreadingServer(ThreadingHTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
 
 class CloudTokenHandler(BaseHTTPRequestHandler):
     def _send_cors(self):
@@ -67,7 +71,7 @@ def run_cloud():
     bot_thread.start()
 
     # 2. Run HTTP server on $PORT for Render health checks and Webhook
-    server = HTTPServer(("0.0.0.0", PORT), CloudTokenHandler)
+    server = ReusableThreadingServer(("0.0.0.0", PORT), CloudTokenHandler)
     print(f"🚀 Cloud Web Server running on port {PORT}...")
     server.serve_forever()
 
