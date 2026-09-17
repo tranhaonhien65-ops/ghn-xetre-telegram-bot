@@ -34,34 +34,29 @@ def send_telegram_message(bot_token: str, chat_id: int or str, text: str, parse_
         return False
 
 def format_single_trip_alert(d: Dict[str, Any]) -> str:
-    """Formats a rich HTML alert card with Call-To-Action reminder for Dispatchers."""
-    delay_badge = f"🔴 <b>TRỄ {d['delay_minutes']} PHÚT</b>"
+    """Formats a clean, airy HTML alert card with Call-To-Action reminder for Dispatchers."""
     phone_val = d.get('driver_phone', '')
-    phone_str = f"📞 <b>{phone_val}</b>" if phone_val else "Chưa có SĐT"
+    phone_str = f"📞 <code>{phone_val}</code>" if phone_val else "Chưa có SĐT"
     schedule_name = d.get('scheduler_name') or 'Lịch trình cố định'
     
     cta_phone = f"<code>{phone_val}</code>" if phone_val else "tài xế"
-    note_line = f"\n📝 <b>Ghi chú:</b> {d['note']}" if d.get('note') else ""
-    address_line = f"\n🏠 <i>{d['stop_address']}</i>" if d.get('stop_address') else ""
+    hub_part = f" (Hub: {d['hub']})" if d.get('hub') else ""
 
     msg = (
         f"🚨 <b>CẢNH BÁO: CHUYẾN XE TRỄ ĐIỂM</b>\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         f"🚚 <b>Mã chuyến:</b> <code>{d['code']}</code>\n"
-        f"📋 <b>Tên lịch trình:</b> <b>{schedule_name}</b>\n"
-        f"🚛 <b>Biển số xe:</b> <b>{d['truck']}</b> (Hub: {d['hub']})\n"
-        f"👤 <b>Tài xế:</b> {d['driver_name']} | {phone_str}\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"📍 <b>Bưu cục #{d['stop_num']}/{d['total_stops']}:</b> <b>{d['stop_name']}</b>{address_line}\n"
+        f"📋 <b>Lịch trình:</b> <b>{schedule_name}</b>\n"
+        f"🚛 <b>Biển số xe:</b> <b>{d['truck']}</b>{hub_part}\n"
+        f"👤 <b>Tài xế:</b> {d['driver_name']} | {phone_str}\n\n"
+        f"📍 <b>Điểm đến:</b> <b>{d['stop_name']}</b> (#{d['stop_num']}/{d['total_stops']})\n"
         f"🔄 <b>Trạng thái:</b> {d['status_desc']}\n"
         f"⏱️ <b>Giờ dự kiến:</b> <code>{d['expected_time_str']}</code>\n"
-        f"⏳ <b>Độ trễ:</b> {delay_badge}\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"⏳ <b>Độ trễ:</b> 🔴 <b>TRỄ {d['delay_minutes']} PHÚT</b>\n\n"
         f"📢 <b>ĐIỀU PHỐI VIÊN LƯU Ý:</b>\n"
-        f"👉 <i>Vui lòng liên hệ tài xế qua SĐT {cta_phone} để kiểm tra lý do và nhắc nhở xe di chuyển đúng giờ!</i>\n"
-        f"━━━━━━━━━━━━━━━━━━━━"
-        f"{note_line}\n"
-        f"🕒 <i>Cập nhật: {datetime.now(VN_TZ).strftime('%H:%M:%S %d/%m/%Y')}</i>"
+        f"👉 <i>Vui lòng liên hệ SĐT {cta_phone} để kiểm tra lý do và giục xe di chuyển đúng giờ!</i>\n\n"
+        f"🕒 <i>Cập nhật: {datetime.now(VN_TZ).strftime('%H:%M:%S • %d/%m/%Y')}</i>\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━"
     )
     return msg
 
@@ -129,7 +124,7 @@ def save_state(state: Dict[str, Any]):
     except Exception as e:
         print(f"[WARN] Failed to save state: {e}")
 
-def filter_new_or_escalated_alerts(delayed_trips: List[Dict[str, Any]], update_interval_seconds: int = 300) -> List[Dict[str, Any]]:
+def filter_new_or_escalated_alerts(delayed_trips: List[Dict[str, Any]], update_interval_seconds: int = 600) -> List[Dict[str, Any]]:
     global _is_first_run
     state = load_state()
     notified = state.get("notified", {})

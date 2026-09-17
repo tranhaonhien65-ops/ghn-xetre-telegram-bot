@@ -252,7 +252,7 @@ def handle_command(text: str, chat_id: int, config: dict) -> None:
             f"🤖 <b>Bot Telegram:</b> Hoạt động bình thường\n"
             f"👥 <b>Nhóm nhận tin:</b> <code>{config.get('GROUP_ID')}</code>\n"
             f"⏱️ <b>Chu kỳ quét:</b> {config.get('POLL_INTERVAL_SECONDS', 60)} giây\n"
-            f"⏳ <b>Ngưỡng trễ:</b> {config.get('DELAY_THRESHOLD_MINUTES', 1)} phút (Nhắc lại mỗi 5p)\n"
+            f"⏳ <b>Ngưỡng trễ:</b> {config.get('DELAY_THRESHOLD_MINUTES', 1)} phút (Nhắc lại mỗi 10p)\n"
             f"🔑 <b>Tài khoản GHN:</b> {token_info}\n"
             f"📡 <b>Auto-Sync Server:</b> Hoạt động (Port 8989)\n"
             f"🕒 <b>Thời gian hiện tại:</b> {now_str}\n"
@@ -276,7 +276,7 @@ def run_bot():
     print(f"👥 Target Group ID: {group_id}")
     print(f"⏱️ Poll Interval: {poll_interval}s")
     print(f"⏳ Delay Threshold: {config.get('DELAY_THRESHOLD_MINUTES', 1)}m")
-    print("🔔 Re-alert Interval: 5 minutes (300s)")
+    print("🔔 Re-alert Interval: 10 minutes (600s)")
     print("📡 Token Auto-Sync Port: 8989")
     print("=" * 50)
 
@@ -321,7 +321,7 @@ def run_bot():
                 consecutive_auth_errors = 0
                 token_error_notified = False
                 delayed_trips = find_all_delayed_trips(trips, threshold_minutes=threshold)
-                to_alert = filter_new_or_escalated_alerts(delayed_trips, update_interval_seconds=300)
+                to_alert = filter_new_or_escalated_alerts(delayed_trips, update_interval_seconds=600)
                 
                 print(f"[{datetime.now(VN_TZ).strftime('%H:%M:%S')}] Active: {len(trips)} | Delayed (>={threshold}m): {len(delayed_trips)} | Alerts: {len(to_alert)}")
                 
