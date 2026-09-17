@@ -266,7 +266,7 @@ def run_bot():
     bot_token = config["BOT_TOKEN"]
     group_id = config["GROUP_ID"]
     poll_interval = config.get("POLL_INTERVAL_SECONDS", 60)
-    
+
     server_thread = threading.Thread(target=start_token_server, args=(8989,), daemon=True)
     server_thread.start()
 
@@ -280,9 +280,20 @@ def run_bot():
     print("📡 Token Auto-Sync Port: 8989")
     print("=" * 50)
 
+    # ── Startup grace period ─────────────────────────────────────────────────
+    # Wait 60s before the first alert cycle so that any previous instance
+    # (old Render deploy) has time to fully shut down. This prevents the
+    # brief overlap from causing duplicate Telegram messages.
+    STARTUP_GRACE = 60
+    print(f"⏳ Startup grace: waiting {STARTUP_GRACE}s before first alert scan...")
+    time.sleep(STARTUP_GRACE)
+    print("✅ Grace period done — starting alert loop.")
+    # ────────────────────────────────────────────────────────────────────────
+
     last_poll_time = 0
     update_offset = None
     token_error_notified = False
+
 
     while True:
         current_time = time.time()
