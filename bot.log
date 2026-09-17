@@ -74,3 +74,186 @@
 [15:32:40] Active: 33 | Delayed (>=1m): 1 | Alerts: 0
 [15:33:43] Active: 33 | Delayed (>=1m): 1 | Alerts: 0
 [15:34:43] Active: 33 | Delayed (>=1m): 1 | Alerts: 0
+[15:35:46] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:36:48] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:37:51] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:38:54] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:39:56] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:40:59] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:42:02] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:43:06] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:44:08] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:45:09] Active: 33 | Delayed (>=1m): 0 | Alerts: 0
+[15:46:10] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[15:47:12] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[15:48:18] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[15:49:24] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[15:50:27] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[15:51:30] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[15:52:30] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[15:53:30] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[15:54:31] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[15:55:31] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[15:56:31] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[15:57:32] Active: 34 | Delayed (>=1m): 0 | Alerts: 0
+[15:58:32] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[15:59:34] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:00:35] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:01:35] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:02:38] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:03:41] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:04:43] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:05:46] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:06:49] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:07:54] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:08:32] Command from chat -5311462943: /check
+[16:08:54] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:09:57] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:10:57] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:12:00] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:13:00] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:14:03] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:15:06] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:16:09] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:17:13] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:18:17] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:19:20] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:20:23] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:21:27] Active: 35 | Delayed (>=1m): 1 | Alerts: 1
+[16:22:31] Active: 35 | Delayed (>=1m): 1 | Alerts: 0
+[16:23:35] Active: 35 | Delayed (>=1m): 1 | Alerts: 0
+[16:24:38] Active: 35 | Delayed (>=1m): 1 | Alerts: 0
+[16:25:41] Active: 35 | Delayed (>=1m): 1 | Alerts: 0
+[16:26:45] Active: 35 | Delayed (>=1m): 1 | Alerts: 1
+[16:27:46] Active: 35 | Delayed (>=1m): 1 | Alerts: 0
+[16:28:50] Active: 35 | Delayed (>=1m): 1 | Alerts: 0
+[16:29:55] Active: 35 | Delayed (>=1m): 1 | Alerts: 0
+[16:30:58] Active: 35 | Delayed (>=1m): 1 | Alerts: 0
+[16:32:01] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:33:05] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:34:09] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:35:13] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:36:16] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:37:19] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:38:19] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:39:22] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:40:26] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:41:30] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:42:34] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[16:43:36] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[17:07:13] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[18:50:30] Command from chat -5311462943: /check
+[18:50:59] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[18:52:01] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[18:53:08] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[18:54:08] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[18:55:13] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[18:56:12] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[18:57:17] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[18:58:18] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[18:59:20] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[19:00:25] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[19:01:29] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[19:02:33] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[19:03:37] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[19:04:37] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[19:05:41] Active: 35 | Delayed (>=1m): 0 | Alerts: 0
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[WARN] GHN API Error: Lỗi kết nối mạng: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+[00:14:22] Active: 16 | Delayed (>=1m): 0 | Alerts: 0
+[00:30:32] Active: 25 | Delayed (>=1m): 0 | Alerts: 0
+[00:39:13] Active: 26 | Delayed (>=1m): 0 | Alerts: 0
+[00:55:44] Active: 26 | Delayed (>=1m): 0 | Alerts: 0
+[01:44:50] Active: 47 | Delayed (>=1m): 0 | Alerts: 0
+[02:02:52] Active: 47 | Delayed (>=1m): 0 | Alerts: 0
+[02:35:46] Active: 47 | Delayed (>=1m): 0 | Alerts: 0
+[03:07:34] Active: 47 | Delayed (>=1m): 0 | Alerts: 0
+[03:39:37] Active: 46 | Delayed (>=1m): 0 | Alerts: 0
+[03:57:26] Active: 46 | Delayed (>=1m): 0 | Alerts: 0
+[04:03:49] Active: 46 | Delayed (>=1m): 2 | Alerts: 2
+[04:17:13] Active: 46 | Delayed (>=1m): 2 | Alerts: 2
+[04:48:25] Active: 45 | Delayed (>=1m): 1 | Alerts: 1
+[05:03:45] Active: 44 | Delayed (>=1m): 1 | Alerts: 1
+[WARN] GHN API Error: Lỗi kết nối mạng: The read operation timed out
+[07:05:48] Active: 43 | Delayed (>=1m): 1 | Alerts: 1
+[07:23:44] Active: 43 | Delayed (>=1m): 0 | Alerts: 0
+[07:41:12] Active: 43 | Delayed (>=1m): 1 | Alerts: 1
+[08:07:25] Active: 38 | Delayed (>=1m): 1 | Alerts: 1
+[08:07:38] Active: 38 | Delayed (>=1m): 1 | Alerts: 0
+[08:16:22] Active: 37 | Delayed (>=1m): 1 | Alerts: 1
+[08:17:23] Active: 36 | Delayed (>=1m): 1 | Alerts: 0
+[08:17:48] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[WARN] GHN API Error: HTTP 401: Token GHN đã hết hạn.
+[08:18:34] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[08:18:34] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[08:18:34] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[08:19:07] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[08:19:07] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[08:19:27] Active: 36 | Delayed (>=1m): 1 | Alerts: 0
+[08:20:31] Active: 36 | Delayed (>=1m): 0 | Alerts: 0
+[08:21:31] Active: 36 | Delayed (>=1m): 2 | Alerts: 2
+[08:22:34] Active: 37 | Delayed (>=1m): 2 | Alerts: 0
+[08:23:43] Active: 37 | Delayed (>=1m): 2 | Alerts: 0
+[08:24:48] Active: 37 | Delayed (>=1m): 1 | Alerts: 0
+[08:25:53] Active: 38 | Delayed (>=1m): 1 | Alerts: 0
+[08:26:56] Active: 38 | Delayed (>=1m): 2 | Alerts: 2
+[08:27:58] Active: 38 | Delayed (>=1m): 2 | Alerts: 0
+[08:28:37] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[08:28:37] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[08:28:37] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[08:28:37] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[WARN] GHN API Error: HTTP 401: Token GHN đã hết hạn.
+[08:29:13] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[08:29:13] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[08:29:13] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[08:30:08] Active: 38 | Delayed (>=1m): 2 | Alerts: 0
+[08:31:07] Active: 38 | Delayed (>=1m): 2 | Alerts: 0
+[08:32:11] Active: 37 | Delayed (>=1m): 2 | Alerts: 2
+[08:32:56] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[WARN] GHN API Error: HTTP 401: Token GHN đã hết hạn.
+[08:33:35] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[08:33:35] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[08:33:35] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[08:34:15] Active: 36 | Delayed (>=1m): 2 | Alerts: 0
+[08:35:23] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[08:35:23] 🔑 [AUTO-SYNC] Đã nhận Token GHN mới tự động từ trình duyệt!
+[08:35:23] Active: 36 | Delayed (>=1m): 2 | Alerts: 0
+[08:36:23] Active: 36 | Delayed (>=1m): 3 | Alerts: 1
+[08:37:33] Active: 36 | Delayed (>=1m): 3 | Alerts: 2
+[08:38:40] Active: 36 | Delayed (>=1m): 3 | Alerts: 0
+[08:39:45] Active: 36 | Delayed (>=1m): 3 | Alerts: 0
+[08:40:49] Active: 36 | Delayed (>=1m): 3 | Alerts: 0
+[08:41:54] Active: 36 | Delayed (>=1m): 3 | Alerts: 1
+[08:42:57] Active: 36 | Delayed (>=1m): 3 | Alerts: 2
+[08:43:59] Active: 36 | Delayed (>=1m): 2 | Alerts: 0
+[08:45:00] Active: 36 | Delayed (>=1m): 2 | Alerts: 0
+[08:46:01] Active: 36 | Delayed (>=1m): 2 | Alerts: 0
+[08:47:05] Active: 35 | Delayed (>=1m): 2 | Alerts: 1
+[08:48:08] Active: 36 | Delayed (>=1m): 2 | Alerts: 1
+[08:49:09] Active: 36 | Delayed (>=1m): 2 | Alerts: 0

@@ -35,17 +35,38 @@ def save_config(cfg):
 
 DEFAULT_GHN_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXAiOiJjb29yZGluYXRvciIsImNpZCI6NzYzMCwiaGlkIjoiTFRORyIsIm5vYyI6IlRy4bqnbiBI4bqhbyBOaGnDqm4iLCJwb2MiOiIwOTQ5MDkwNDEwIiwiZXhwIjoxNzg5NjkyOTEyfQ.yiH2u3BbqGvGwzDD8TOLWWOhPztMuUoAHn9bwPDn91A"
 
+# In-memory token cache (survives within a single Render session)
+_token_cache: str = ""
+
 def get_ghn_token() -> str:
+    global _token_cache
+    # 1. In-memory cache (updated live by Tampermonkey webhook)
+    if _token_cache:
+        return _token_cache
+    # 2. Token file (written by webhook, ephemeral on Render)
     if TOKEN_FILE.exists():
         try:
             with open(TOKEN_FILE, "r", encoding="utf-8") as f:
                 t = f.read().strip()
                 if t:
+                    _token_cache = t
                     return t
         except Exception:
             pass
+    # 3. Environment variable GHN_TOKEN (persistent on Render across restarts)
+    env_token = os.environ.get("GHN_TOKEN", "").strip()
+    if env_token:
+        _token_cache = env_token
+        return env_token
+    # 4. Fallback (may be expired)
     return DEFAULT_GHN_TOKEN
 
 def save_ghn_token(new_token: str):
-    with open(TOKEN_FILE, "w", encoding="utf-8") as f:
-        f.write(new_token.strip())
+    global _token_cache
+    new_token = new_token.strip()
+    _token_cache = new_token
+    try:
+        with open(TOKEN_FILE, "w", encoding="utf-8") as f:
+            f.write(new_token)
+    except Exception as e:
+        print(f"[WARN] Cannot write token file: {e}")
