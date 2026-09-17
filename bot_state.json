@@ -1,17 +1,11 @@
 {
   "notified": {
     "E260916FXW8DZY1_6": {
-      "last_delay": 23,
+      "last_delay": 28,
       "first_notified_ts": 1789608416.448473,
-      "last_notified_ts": 1789609688.192476,
-      "last_notified_at": "08:48:08"
-    },
-    "E260916CZ7770YH_5": {
-      "last_delay": 12,
-      "first_notified_ts": 1789608983.64353,
-      "last_notified_ts": 1789609625.922455,
-      "last_notified_at": "08:47:05"
+      "last_notified_ts": 1789609996.915932,
+      "last_notified_at": "08:53:16"
     }
   },
-  "last_check": "2026-09-17T08:49:09.624541+07:00"
+  "last_check": "2026-09-17T08:54:30.137645+07:00"
 }

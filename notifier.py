@@ -98,16 +98,28 @@ def format_summary_report(delayed_trips: List[Dict[str, Any]], total_active: int
     )
     return "\n".join(lines)
 
+
+# ── In-memory state cache (survives within a Render session) ──────────────
+_state_cache: Dict[str, Any] = {}
+_is_first_run: bool = True        # True until the first full scan completes
+
 def load_state() -> Dict[str, Any]:
+    global _state_cache
+    if _state_cache:
+        return _state_cache
     if STATE_FILE.exists():
         try:
             with open(STATE_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                _state_cache = json.load(f)
+                return _state_cache
         except Exception:
             pass
-    return {"notified": {}, "last_check": None}
+    _state_cache = {"notified": {}, "last_check": None}
+    return _state_cache
 
 def save_state(state: Dict[str, Any]):
+    global _state_cache
+    _state_cache = state
     try:
         with open(STATE_FILE, "w", encoding="utf-8") as f:
             json.dump(state, f, ensure_ascii=False, indent=2)
@@ -115,27 +127,40 @@ def save_state(state: Dict[str, Any]):
         print(f"[WARN] Failed to save state: {e}")
 
 def filter_new_or_escalated_alerts(delayed_trips: List[Dict[str, Any]], update_interval_seconds: int = 300) -> List[Dict[str, Any]]:
+    global _is_first_run
     state = load_state()
     notified = state.get("notified", {})
     to_alert = []
-    
+
     active_keys = set()
     now_ts = datetime.now(VN_TZ).timestamp()
-    
+
     for d in delayed_trips:
         key = f"{d['code']}_{d['stop_num']}"
         active_keys.add(key)
         delay_now = d["delay_minutes"]
-        
+
         last_info = notified.get(key)
         if not last_info:
-            to_alert.append(d)
-            notified[key] = {
-                "last_delay": delay_now,
-                "first_notified_ts": now_ts,
-                "last_notified_ts": now_ts,
-                "last_notified_at": datetime.now(VN_TZ).strftime("%H:%M:%S")
-            }
+            # New delayed trip: on first run after restart, skip trips delayed < 5 min
+            # to avoid spamming when Render reboots with many already-delayed trips.
+            if _is_first_run and delay_now < 5:
+                # Record silently — will alert on next cycle if still delayed
+                notified[key] = {
+                    "last_delay": delay_now,
+                    "first_notified_ts": now_ts,
+                    "last_notified_ts": now_ts - update_interval_seconds,  # allow alert next cycle
+                    "last_notified_at": None,
+                    "silent_start": True
+                }
+            else:
+                to_alert.append(d)
+                notified[key] = {
+                    "last_delay": delay_now,
+                    "first_notified_ts": now_ts,
+                    "last_notified_ts": now_ts,
+                    "last_notified_at": datetime.now(VN_TZ).strftime("%H:%M:%S")
+                }
         else:
             last_ts = last_info.get("last_notified_ts", 0)
             if (now_ts - last_ts) >= update_interval_seconds:
@@ -143,13 +168,15 @@ def filter_new_or_escalated_alerts(delayed_trips: List[Dict[str, Any]], update_i
                 last_info["last_delay"] = delay_now
                 last_info["last_notified_ts"] = now_ts
                 last_info["last_notified_at"] = datetime.now(VN_TZ).strftime("%H:%M:%S")
-    
+                last_info.pop("silent_start", None)
+
     keys_to_remove = [k for k in notified if k not in active_keys]
     for k in keys_to_remove:
         del notified[k]
-        
+
     state["notified"] = notified
     state["last_check"] = datetime.now(VN_TZ).isoformat()
     save_state(state)
-    
+
+    _is_first_run = False
     return to_alert
