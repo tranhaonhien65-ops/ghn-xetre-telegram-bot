@@ -41,13 +41,24 @@ def fetch_trips_page(token: str, page: int = 1, retries: int = 2) -> Tuple[Optio
     ctx.verify_mode = ssl.CERT_NONE
     
     for attempt in range(retries):
+        # Always reload token on each attempt in case it was updated in the background
+        current_token = get_ghn_token()
+        headers["authorization"] = f"Bearer {current_token}"
+        req = urllib.request.Request(API_URL, data=data_bytes, headers=headers, method="PATCH")
+        
         try:
-            with urllib.request.urlopen(req, context=ctx, timeout=30) as response:
+            with urllib.request.urlopen(req, context=ctx, timeout=25) as response:
                 res_body = response.read().decode("utf-8")
                 return json.loads(res_body), None, False
         except urllib.error.HTTPError as e:
             if e.code in (401, 403):
+                if attempt < retries - 1:
+                    time.sleep(2)
+                    continue
                 return None, f"HTTP {e.code}: Token GHN đã hết hạn.", True
+            if attempt < retries - 1:
+                time.sleep(2)
+                continue
             return None, f"HTTP Error {e.code}: {e.reason}", False
         except Exception as e:
             if attempt < retries - 1:

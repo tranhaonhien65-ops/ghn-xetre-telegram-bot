@@ -1,15 +1,17 @@
 // ==UserScript==
-// @name         GHN Auto Token Sync for Telegram Bot
+// @name         GHN Auto Token Sync for Telegram Bot (Cloud & Local)
 // @namespace    http://tampermonkey.net/
-// @version      1.0
-// @description  Tự động đồng bộ Bearer Token từ nhanh.ghn.vn sang Telegram Bot
+// @version      1.2
+// @description  Tự động đồng bộ Bearer Token từ nhanh.ghn.vn sang Telegram Bot Cloud + Local. Tự refresh mỗi 20 phút.
 // @author       Antigravity
 // @match        https://nhanh.ghn.vn/*
 // @grant        GM_xmlhttpRequest
+// @connect      ghn-xetre-telegram-bot.onrender.com
 // @connect      localhost
 // @connect      127.0.0.1
 // @run-at       document-start
 // ==/UserScript==
+
 
 (function() {
     'use strict';
@@ -46,8 +48,9 @@
         }
     }
 
-    function sendTokenToBot(token) {
-        if (!token || token === lastSentToken || token.length < 30) return;
+    function sendTokenToBot(token, force = false) {
+        if (!token || token.length < 30) return;
+        if (!force && token === lastSentToken) return;
         lastSentToken = token;
 
         console.log("%c[GHN Bot Sync] Đang đồng bộ Token mới...", "color: #0088cc; font-weight: bold;");
@@ -57,6 +60,19 @@
         sendToUrl(CLOUD_SYNC_URL, payload, true);
         // Gửi sang Local (nếu có)
         sendToUrl(LOCAL_SYNC_URL, payload, false);
+    }
+
+    function getTokenFromStorage() {
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const val = localStorage.getItem(localStorage.key(i));
+                if (val && val.includes("eyJhbGciOi")) {
+                    const match = val.match(/eyJhbGciOi[a-zA-Z0-9_.\-]+/);
+                    if (match) return match[0];
+                }
+            }
+        } catch (e) {}
+        return null;
     }
 
     function showToast(message) {
@@ -113,15 +129,18 @@
 
     // 3. Scan Storage on load
     window.addEventListener("load", function() {
-        try {
-            for (let i = 0; i < localStorage.length; i++) {
-                const val = localStorage.getItem(localStorage.key(i));
-                if (val && val.includes("eyJhbGciOi")) {
-                    const match = val.match(/eyJhbGciOi[a-zA-Z0-9_\.\-]+/);
-                    if (match) sendTokenToBot(match[0]);
-                }
+        const token = getTokenFromStorage();
+        if (token) sendTokenToBot(token);
+
+        // 4. Periodic re-sync mỗi 20 phút để token không bao giờ hết hạn trên Cloud
+        // Dùng force=true để luôn gửi dù token không đổi
+        setInterval(function() {
+            const freshToken = getTokenFromStorage();
+            if (freshToken) {
+                console.log("%c[GHN Bot Sync] ⏰ Định kỳ 20 phút: Làm mới Token lên Cloud...", "color: #ff8800; font-weight: bold;");
+                sendTokenToBot(freshToken, true);
             }
-        } catch (e) {}
+        }, 20 * 60 * 1000); // 20 phút
     });
 
 })();

@@ -292,8 +292,8 @@ def run_bot():
 
     last_poll_time = 0
     update_offset = None
+    consecutive_auth_errors = 0
     token_error_notified = False
-
 
     while True:
         current_time = time.time()
@@ -305,14 +305,20 @@ def run_bot():
             trips, err, is_expired = fetch_all_active_trips()
             if err:
                 print(f"[WARN] GHN API Error: {err}")
-                # ONLY notify Telegram group if token is genuinely expired (401/403)
-                if is_expired and not token_error_notified:
+                if is_expired:
+                    consecutive_auth_errors += 1
+                else:
+                    consecutive_auth_errors = 0
+                
+                # ONLY notify Telegram group if token is genuinely expired for 3 consecutive polls (3 minutes)
+                if is_expired and consecutive_auth_errors >= 3 and not token_error_notified:
                     send_telegram_message(
                         bot_token, group_id,
                         f"⚠️ <b>CẢNH BÁO MẤT KẾT NỐI GHN:</b> {err}\n\n💡 Vui lòng mở lại trang GHN trên trình duyệt để tự động đồng bộ Token mới."
                     )
                     token_error_notified = True
             else:
+                consecutive_auth_errors = 0
                 token_error_notified = False
                 delayed_trips = find_all_delayed_trips(trips, threshold_minutes=threshold)
                 to_alert = filter_new_or_escalated_alerts(delayed_trips, update_interval_seconds=300)
