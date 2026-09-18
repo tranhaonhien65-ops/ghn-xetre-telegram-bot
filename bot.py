@@ -241,7 +241,10 @@ def handle_command(text: str, chat_id: int, config: dict) -> None:
                 exp_dt = datetime.fromtimestamp(exp, VN_TZ)
                 now_dt = datetime.now(VN_TZ)
                 remaining_hours = (exp_dt - now_dt).total_seconds() / 3600
-                token_info = f"{noc} [{hid}] (Hết hạn lúc: {exp_dt.strftime('%H:%M %d/%m/%Y')} - còn {remaining_hours:.1f}h)"
+                if remaining_hours > 0:
+                    token_info = f"{noc} [{hid}] (Hết hạn lúc: {exp_dt.strftime('%H:%M %d/%m/%Y')} - còn {remaining_hours:.1f}h)"
+                else:
+                    token_info = f"❌ {noc} [{hid}] (ĐÃ HẾT HẠN lúc {exp_dt.strftime('%H:%M %d/%m/%Y')} - Vui lòng F5 trang GHN để đồng bộ)"
         except Exception:
             pass
 
