@@ -64,8 +64,17 @@
 
     function getTokenFromStorage() {
         try {
+            // 1. Scan localStorage
             for (let i = 0; i < localStorage.length; i++) {
                 const val = localStorage.getItem(localStorage.key(i));
+                if (val && val.includes("eyJhbGciOi")) {
+                    const match = val.match(/eyJhbGciOi[a-zA-Z0-9_.\-]+/);
+                    if (match) return match[0];
+                }
+            }
+            // 2. Scan sessionStorage
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const val = sessionStorage.getItem(sessionStorage.key(i));
                 if (val && val.includes("eyJhbGciOi")) {
                     const match = val.match(/eyJhbGciOi[a-zA-Z0-9_.\-]+/);
                     if (match) return match[0];
@@ -127,20 +136,23 @@
         return originalFetch.apply(this, args);
     };
 
-    // 3. Scan Storage on load
-    window.addEventListener("load", function() {
+    function triggerSync() {
         const token = getTokenFromStorage();
-        if (token) sendTokenToBot(token);
+        if (token) {
+            sendTokenToBot(token, true);
+        }
+    }
 
-        // 4. Periodic re-sync mỗi 20 phút để token không bao giờ hết hạn trên Cloud
-        // Dùng force=true để luôn gửi dù token không đổi
-        setInterval(function() {
-            const freshToken = getTokenFromStorage();
-            if (freshToken) {
-                console.log("%c[GHN Bot Sync] ⏰ Định kỳ 20 phút: Làm mới Token lên Cloud...", "color: #ff8800; font-weight: bold;");
-                sendTokenToBot(freshToken, true);
-            }
-        }, 20 * 60 * 1000); // 20 phút
+    // 3. Auto sync on load, tab focus, and visibility change
+    window.addEventListener("load", triggerSync);
+    window.addEventListener("focus", triggerSync);
+    document.addEventListener("visibilitychange", function() {
+        if (!document.hidden) {
+            triggerSync();
+        }
     });
+
+    // 4. Periodic re-sync mỗi 15 phút
+    setInterval(triggerSync, 15 * 60 * 1000);
 
 })();
