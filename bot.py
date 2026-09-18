@@ -260,48 +260,45 @@ def handle_command(text: str, chat_id: int, config: dict) -> None:
         )
         send_telegram_message(bot_token, chat_id, msg)
 
-def run_bot():
-    enforce_single_instance()
-    config = load_config()
+def telegram_command_worker(config: dict):
+    bot_token = config["BOT_TOKEN"]
+    update_offset = None
+    print("📡 Telegram Command Listener thread started.")
+    while True:
+        try:
+            updates = get_telegram_updates(bot_token, offset=update_offset, timeout=5)
+            for u in updates:
+                update_offset = u["update_id"] + 1
+                msg = u.get("message")
+                if msg and "text" in msg:
+                    chat_id = msg["chat"]["id"]
+                    text = msg["text"]
+                    if text.startswith("/"):
+                        print(f"[{datetime.now(VN_TZ).strftime('%H:%M:%S')}] Command from chat {chat_id}: {text}")
+                        handle_command(text, chat_id, config)
+        except Exception as e:
+            print(f"[ERROR in telegram_command_worker]: {e}")
+            time.sleep(2)
+        time.sleep(0.5)
+
+def ghn_alert_worker(config: dict):
     bot_token = config["BOT_TOKEN"]
     group_id = config["GROUP_ID"]
     poll_interval = config.get("POLL_INTERVAL_SECONDS", 60)
-
-    server_thread = threading.Thread(target=start_token_server, args=(8989,), daemon=True)
-    server_thread.start()
-
-    print("=" * 50)
-    print("🚀 GHN LATE TRUCK MONITOR BOT STARTED")
-    print(f"📍 Bot Token: {bot_token[:10]}...{bot_token[-5:]}")
-    print(f"👥 Target Group ID: {group_id}")
-    print(f"⏱️ Poll Interval: {poll_interval}s")
-    print(f"⏳ Delay Threshold: {config.get('DELAY_THRESHOLD_MINUTES', 1)}m")
-    print("🔔 Re-alert Interval: 10 minutes (600s)")
-    print("📡 Token Auto-Sync Port: 8989")
-    print("=" * 50)
-
+    
     # ── Startup grace period ─────────────────────────────────────────────────
-    # Wait 60s before the first alert cycle so that any previous instance
-    # (old Render deploy) has time to fully shut down. This prevents the
-    # brief overlap from causing duplicate Telegram messages.
     STARTUP_GRACE = 60
     print(f"⏳ Startup grace: waiting {STARTUP_GRACE}s before first alert scan...")
     time.sleep(STARTUP_GRACE)
     print("✅ Grace period done — starting alert loop.")
     # ────────────────────────────────────────────────────────────────────────
 
-    last_poll_time = 0
-    update_offset = None
     consecutive_auth_errors = 0
     token_error_notified = False
 
     while True:
-        current_time = time.time()
-        
-        if current_time - last_poll_time >= poll_interval:
-            last_poll_time = current_time
+        try:
             threshold = config.get("DELAY_THRESHOLD_MINUTES", 1)
-            
             trips, err, is_expired = fetch_all_active_trips()
             if err:
                 print(f"[WARN] GHN API Error: {err}")
@@ -329,19 +326,43 @@ def run_bot():
                     alert_msg = format_single_trip_alert(d)
                     send_telegram_message(bot_token, group_id, alert_msg)
                     time.sleep(1)
+        except Exception as e:
+            print(f"[ERROR in ghn_alert_worker]: {e}")
+            
+        time.sleep(poll_interval)
 
-        updates = get_telegram_updates(bot_token, offset=update_offset, timeout=2)
-        for u in updates:
-            update_offset = u["update_id"] + 1
-            msg = u.get("message")
-            if msg and "text" in msg:
-                chat_id = msg["chat"]["id"]
-                text = msg["text"]
-                if text.startswith("/"):
-                    print(f"[{datetime.now(VN_TZ).strftime('%H:%M:%S')}] Command from chat {chat_id}: {text}")
-                    handle_command(text, chat_id, config)
+def run_bot():
+    enforce_single_instance()
+    config = load_config()
+    bot_token = config["BOT_TOKEN"]
+    group_id = config["GROUP_ID"]
+    poll_interval = config.get("POLL_INTERVAL_SECONDS", 60)
 
-        time.sleep(1)
+    server_thread = threading.Thread(target=start_token_server, args=(8989,), daemon=True)
+    server_thread.start()
+
+    print("=" * 50)
+    print("🚀 GHN LATE TRUCK MONITOR BOT STARTED")
+    print(f"📍 Bot Token: {bot_token[:10]}...{bot_token[-5:]}")
+    print(f"👥 Target Group ID: {group_id}")
+    print(f"⏱️ Poll Interval: {poll_interval}s")
+    print(f"⏳ Delay Threshold: {config.get('DELAY_THRESHOLD_MINUTES', 1)}m")
+    print("🔔 Re-alert Interval: 10 minutes (600s)")
+    print("📡 Token Auto-Sync Port: 8989")
+    print("=" * 50)
+
+    # 1. Start dedicated Telegram Command Worker thread
+    cmd_thread = threading.Thread(target=telegram_command_worker, args=(config,), daemon=True)
+    cmd_thread.start()
+
+    # 2. Start dedicated GHN Alert Worker thread
+    alert_thread = threading.Thread(target=ghn_alert_worker, args=(config,), daemon=True)
+    alert_thread.start()
+
+    # 3. Main thread keepalive
+    while True:
+        time.sleep(60)
 
 if __name__ == "__main__":
     run_bot()
+
