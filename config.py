@@ -48,7 +48,11 @@ def is_token_valid(token: str) -> bool:
             padded = parts[1] + '=' * (-len(parts[1]) % 4)
             payload_json = json.loads(base64.b64decode(padded).decode('utf-8'))
             exp = payload_json.get('exp', 0)
-            return time.time() < exp
+            if time.time() >= exp:
+                return False
+            # MUST be a GHN coordinator/staff token
+            if payload_json.get('typ') in ('coordinator', 'staff', 'admin') or payload_json.get('hid') or payload_json.get('noc'):
+                return True
     except Exception:
         pass
     return False
@@ -76,13 +80,16 @@ def get_ghn_token() -> str:
     # 4. Fallback (return cache if exists, otherwise env or default)
     return _token_cache or env_token or DEFAULT_GHN_TOKEN
 
-
-def save_ghn_token(new_token: str):
+def save_ghn_token(new_token: str) -> bool:
     global _token_cache
     new_token = new_token.strip()
+    if not is_token_valid(new_token):
+        print(f"[WARN] Rejected invalid or non-GHN token")
+        return False
     _token_cache = new_token
     try:
         with open(TOKEN_FILE, "w", encoding="utf-8") as f:
             f.write(new_token)
     except Exception as e:
         print(f"[WARN] Cannot write token file: {e}")
+    return True

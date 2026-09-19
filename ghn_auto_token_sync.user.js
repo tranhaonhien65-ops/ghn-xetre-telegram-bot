@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         GHN Auto Token Sync for Telegram Bot (Smart JWT)
+// @name         GHN Auto Token Sync for Telegram Bot (Smart JWT v2.1)
 // @namespace    http://tampermonkey.net/
-// @version      2.0
-// @description  Tự động lọc token còn hạn mới nhất từ GHN và đồng bộ lên Cloud Render
+// @version      2.1
+// @description  Tự động lọc đúng Token Điều Phối GHN còn hạn và gửi lên Cloud Render
 // @author       Antigravity
 // @match        https://nhanh.ghn.vn/*
 // @grant        GM_xmlhttpRequest
@@ -19,16 +19,20 @@
     const CLOUD_SYNC_URL = "https://ghn-xetre-telegram-bot.onrender.com/update_token";
     const LOCAL_SYNC_URL = "http://localhost:8989/update_token";
 
-    function decodeJwtExp(token) {
+    function parseGhnJwt(token) {
+        if (!token || typeof token !== "string" || token.length < 30) return null;
         try {
             const parts = token.split('.');
             if (parts.length >= 2) {
                 const padded = parts[1] + '='.repeat((4 - parts[1].length % 4) % 4);
                 const payload = JSON.parse(atob(padded.replace(/-/g, '+').replace(/_/g, '/')));
-                return payload.exp || 0;
+                // Bắt buộc phải là Token Điều Phối GHN (có noc, hid hoặc typ coordinator)
+                if (payload.typ === 'coordinator' || payload.hid || payload.noc || payload.orgCode === 'ghnexpress') {
+                    return payload;
+                }
             }
         } catch (e) {}
-        return 0;
+        return null;
     }
 
     function sendToUrl(url, payload, isCloud = false) {
@@ -40,8 +44,8 @@
                 data: payload,
                 onload: function(res) {
                     if (res.status === 200 && isCloud) {
-                        console.log("%c[GHN Bot Sync] ☁️ Đã nạp Token mới lên Cloud thành công!", "color: #28a745; font-weight: bold;");
-                        showToast("☁️ Đã đồng bộ Token GHN mới lên Cloud (24/7)!");
+                        console.log("%c[GHN Bot Sync] ☁️ Đã nạp Token Điều Phối GHN lên Cloud thành công!", "color: #28a745; font-weight: bold;");
+                        showToast("☁️ Đã nạp Token Điều Phối GHN lên Cloud (24/7)!");
                     }
                 },
                 onerror: function() {}
@@ -53,34 +57,35 @@
                 body: payload
             }).then(r => r.json()).then(data => {
                 if (isCloud) {
-                    showToast("☁️ Đã đồng bộ Token GHN mới lên Cloud (24/7)!");
+                    showToast("☁️ Đã nạp Token Điều Phối GHN lên Cloud (24/7)!");
                 }
             }).catch(() => {});
         }
     }
 
     function sendTokenToBot(token, force = false) {
-        if (!token || token.length < 30) return;
+        const payloadJson = parseGhnJwt(token);
+        if (!payloadJson) return; // Bỏ qua token không phải của GHN Coordinator
+        
         const nowSec = Math.floor(Date.now() / 1000);
-        const exp = decodeJwtExp(token);
+        const exp = payloadJson.exp || 0;
         
         // Bỏ qua token đã hết hạn
         if (exp > 0 && exp <= nowSec) {
-            console.warn("[GHN Bot Sync] Bỏ qua token đã hết hạn:", exp);
             return;
         }
 
         if (!force && token === lastSentToken) return;
         lastSentToken = token;
 
-        console.log("%c[GHN Bot Sync] 🚀 Đang gửi Token còn hạn lên Cloud (Hạn: " + (exp > 0 ? new Date(exp * 1000).toLocaleString('vi-VN') : 'N/A') + ")...", "color: #0088cc; font-weight: bold;");
+        console.log("%c[GHN Bot Sync] 🚀 Đang gửi Token Điều Phối GHN: " + (payloadJson.noc || '') + " [" + (payloadJson.hid || '') + "] (Hạn: " + (exp > 0 ? new Date(exp * 1000).toLocaleString('vi-VN') : 'N/A') + ")...", "color: #0088cc; font-weight: bold;");
         const payload = JSON.stringify({ token: token });
 
         sendToUrl(CLOUD_SYNC_URL, payload, true);
         sendToUrl(LOCAL_SYNC_URL, payload, false);
     }
 
-    function getBestTokenFromStorage() {
+    function getBestGhnToken() {
         let bestToken = null;
         let maxExp = 0;
         const nowSec = Math.floor(Date.now() / 1000);
@@ -89,9 +94,9 @@
             if (!val || typeof val !== "string" || !val.includes("eyJhbGciOi")) return;
             const matches = val.match(/eyJhbGciOi[a-zA-Z0-9_.\-]+/g) || [];
             for (const t of matches) {
-                const exp = decodeJwtExp(t);
-                if (exp > maxExp) {
-                    maxExp = exp;
+                const p = parseGhnJwt(t);
+                if (p && p.exp && p.exp > maxExp && p.exp > nowSec) {
+                    maxExp = p.exp;
                     bestToken = t;
                 }
             }
@@ -109,10 +114,7 @@
             }
         } catch (e) {}
 
-        if (bestToken && maxExp > nowSec) {
-            return bestToken;
-        }
-        return null;
+        return bestToken;
     }
 
     function showToast(message) {
@@ -168,7 +170,7 @@
     };
 
     function triggerSync() {
-        const token = getBestTokenFromStorage();
+        const token = getBestGhnToken();
         if (token) {
             sendTokenToBot(token, true);
         }
