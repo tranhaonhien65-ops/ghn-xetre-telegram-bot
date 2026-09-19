@@ -8,30 +8,46 @@ from config import STATE_FILE, load_config
 
 VN_TZ = timezone(timedelta(hours=7))
 
-def send_telegram_message(bot_token: str, chat_id: int or str, text: str, parse_mode: str = "HTML") -> bool:
-    """Sends a message via Telegram Bot API using urllib."""
+import re
+import urllib.error
+
+def send_telegram_message(bot_token: str, chat_id: int or str, text: str, parse_mode: Optional[str] = "HTML") -> bool:
+    """Sends a message via Telegram Bot API using urllib, with automatic fallback to plain text if HTML parsing fails."""
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": text,
-        "parse_mode": parse_mode,
-        "disable_web_page_preview": True
-    }
-    data_bytes = json.dumps(payload).encode("utf-8")
-    headers = {"Content-Type": "application/json"}
     
-    req = urllib.request.Request(url, data=data_bytes, headers=headers, method="POST")
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    
-    try:
-        with urllib.request.urlopen(req, context=ctx, timeout=10) as response:
-            res_data = json.loads(response.read().decode("utf-8"))
-            return res_data.get("ok", False)
-    except Exception as e:
-        print(f"[ERROR] Failed to send Telegram message: {e}")
-        return False
+    for mode in [parse_mode, None]:
+        clean_text = text if mode else re.sub(r'<[^>]+>', '', text)
+        payload = {
+            "chat_id": chat_id,
+            "text": clean_text,
+            "disable_web_page_preview": True
+        }
+        if mode:
+            payload["parse_mode"] = mode
+            
+        data_bytes = json.dumps(payload).encode("utf-8")
+        headers = {"Content-Type": "application/json"}
+        req = urllib.request.Request(url, data=data_bytes, headers=headers, method="POST")
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        
+        try:
+            with urllib.request.urlopen(req, context=ctx, timeout=10) as response:
+                res_data = json.loads(response.read().decode("utf-8"))
+                if res_data.get("ok"):
+                    return True
+        except urllib.error.HTTPError as e:
+            if e.code == 400 and mode == "HTML":
+                # Fallback to plain text on next attempt
+                continue
+            print(f"[ERROR] Failed to send Telegram message: {e}")
+            break
+        except Exception as e:
+            print(f"[ERROR] Failed to send Telegram message: {e}")
+            break
+            
+    return False
 
 def format_single_trip_alert(d: Dict[str, Any]) -> str:
     """Formats a clean, airy HTML alert card with Call-To-Action reminder for Dispatchers."""
