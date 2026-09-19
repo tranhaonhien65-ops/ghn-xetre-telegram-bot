@@ -38,28 +38,44 @@ DEFAULT_GHN_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0eXAiOiJjb29yZGluYX
 # In-memory token cache (survives within a single Render session)
 _token_cache: str = ""
 
+def is_token_valid(token: str) -> bool:
+    if not token or len(token) < 30:
+        return False
+    try:
+        import base64, time
+        parts = token.split('.')
+        if len(parts) >= 2:
+            padded = parts[1] + '=' * (-len(parts[1]) % 4)
+            payload_json = json.loads(base64.b64decode(padded).decode('utf-8'))
+            exp = payload_json.get('exp', 0)
+            return time.time() < exp
+    except Exception:
+        pass
+    return False
+
 def get_ghn_token() -> str:
     global _token_cache
     # 1. In-memory cache (updated live by Tampermonkey webhook)
-    if _token_cache:
+    if _token_cache and is_token_valid(_token_cache):
         return _token_cache
     # 2. Token file (written by webhook, ephemeral on Render)
     if TOKEN_FILE.exists():
         try:
             with open(TOKEN_FILE, "r", encoding="utf-8") as f:
                 t = f.read().strip()
-                if t:
+                if t and is_token_valid(t):
                     _token_cache = t
                     return t
         except Exception:
             pass
     # 3. Environment variable GHN_TOKEN (persistent on Render across restarts)
     env_token = os.environ.get("GHN_TOKEN", "").strip()
-    if env_token:
+    if env_token and is_token_valid(env_token):
         _token_cache = env_token
         return env_token
-    # 4. Fallback (may be expired)
-    return DEFAULT_GHN_TOKEN
+    # 4. Fallback (return cache if exists, otherwise env or default)
+    return _token_cache or env_token or DEFAULT_GHN_TOKEN
+
 
 def save_ghn_token(new_token: str):
     global _token_cache
