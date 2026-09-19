@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         GHN Auto Token Sync for Telegram Bot (Cloud & Local)
+// @name         GHN Auto Token Sync for Telegram Bot (Smart JWT)
 // @namespace    http://tampermonkey.net/
-// @version      1.2
-// @description  Tự động đồng bộ Bearer Token từ nhanh.ghn.vn sang Telegram Bot Cloud + Local. Tự refresh mỗi 20 phút.
+// @version      2.0
+// @description  Tự động lọc token còn hạn mới nhất từ GHN và đồng bộ lên Cloud Render
 // @author       Antigravity
 // @match        https://nhanh.ghn.vn/*
 // @grant        GM_xmlhttpRequest
@@ -12,13 +12,24 @@
 // @run-at       document-start
 // ==/UserScript==
 
-
 (function() {
     'use strict';
 
     let lastSentToken = "";
     const CLOUD_SYNC_URL = "https://ghn-xetre-telegram-bot.onrender.com/update_token";
     const LOCAL_SYNC_URL = "http://localhost:8989/update_token";
+
+    function decodeJwtExp(token) {
+        try {
+            const parts = token.split('.');
+            if (parts.length >= 2) {
+                const padded = parts[1] + '='.repeat((4 - parts[1].length % 4) % 4);
+                const payload = JSON.parse(atob(padded.replace(/-/g, '+').replace(/_/g, '/')));
+                return payload.exp || 0;
+            }
+        } catch (e) {}
+        return 0;
+    }
 
     function sendToUrl(url, payload, isCloud = false) {
         if (typeof GM_xmlhttpRequest !== "undefined") {
@@ -29,8 +40,8 @@
                 data: payload,
                 onload: function(res) {
                     if (res.status === 200 && isCloud) {
-                        console.log("%c[GHN Bot Cloud Sync] ☁️ Đã đồng bộ Token lên Cloud Render thành công!", "color: #28a745; font-weight: bold;");
-                        showToast("☁️ Đã đồng bộ Token mới lên Cloud Render (24/7)!");
+                        console.log("%c[GHN Bot Sync] ☁️ Đã nạp Token mới lên Cloud thành công!", "color: #28a745; font-weight: bold;");
+                        showToast("☁️ Đã đồng bộ Token GHN mới lên Cloud (24/7)!");
                     }
                 },
                 onerror: function() {}
@@ -42,7 +53,7 @@
                 body: payload
             }).then(r => r.json()).then(data => {
                 if (isCloud) {
-                    showToast("☁️ Đã đồng bộ Token mới lên Cloud Render (24/7)!");
+                    showToast("☁️ Đã đồng bộ Token GHN mới lên Cloud (24/7)!");
                 }
             }).catch(() => {});
         }
@@ -50,37 +61,57 @@
 
     function sendTokenToBot(token, force = false) {
         if (!token || token.length < 30) return;
+        const nowSec = Math.floor(Date.now() / 1000);
+        const exp = decodeJwtExp(token);
+        
+        // Bỏ qua token đã hết hạn
+        if (exp > 0 && exp <= nowSec) {
+            console.warn("[GHN Bot Sync] Bỏ qua token đã hết hạn:", exp);
+            return;
+        }
+
         if (!force && token === lastSentToken) return;
         lastSentToken = token;
 
-        console.log("%c[GHN Bot Sync] Đang đồng bộ Token mới...", "color: #0088cc; font-weight: bold;");
+        console.log("%c[GHN Bot Sync] 🚀 Đang gửi Token còn hạn lên Cloud (Hạn: " + (exp > 0 ? new Date(exp * 1000).toLocaleString('vi-VN') : 'N/A') + ")...", "color: #0088cc; font-weight: bold;");
         const payload = JSON.stringify({ token: token });
 
-        // Gửi lên Cloud Render
         sendToUrl(CLOUD_SYNC_URL, payload, true);
-        // Gửi sang Local (nếu có)
         sendToUrl(LOCAL_SYNC_URL, payload, false);
     }
 
-    function getTokenFromStorage() {
-        try {
-            // 1. Scan localStorage
-            for (let i = 0; i < localStorage.length; i++) {
-                const val = localStorage.getItem(localStorage.key(i));
-                if (val && val.includes("eyJhbGciOi")) {
-                    const match = val.match(/eyJhbGciOi[a-zA-Z0-9_.\-]+/);
-                    if (match) return match[0];
+    function getBestTokenFromStorage() {
+        let bestToken = null;
+        let maxExp = 0;
+        const nowSec = Math.floor(Date.now() / 1000);
+
+        function checkVal(val) {
+            if (!val || typeof val !== "string" || !val.includes("eyJhbGciOi")) return;
+            const matches = val.match(/eyJhbGciOi[a-zA-Z0-9_.\-]+/g) || [];
+            for (const t of matches) {
+                const exp = decodeJwtExp(t);
+                if (exp > maxExp) {
+                    maxExp = exp;
+                    bestToken = t;
                 }
             }
-            // 2. Scan sessionStorage
+        }
+
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                checkVal(localStorage.getItem(localStorage.key(i)));
+            }
             for (let i = 0; i < sessionStorage.length; i++) {
-                const val = sessionStorage.getItem(sessionStorage.key(i));
-                if (val && val.includes("eyJhbGciOi")) {
-                    const match = val.match(/eyJhbGciOi[a-zA-Z0-9_.\-]+/);
-                    if (match) return match[0];
-                }
+                checkVal(sessionStorage.getItem(sessionStorage.key(i)));
+            }
+            if (document.cookie) {
+                checkVal(document.cookie);
             }
         } catch (e) {}
+
+        if (bestToken && maxExp > nowSec) {
+            return bestToken;
+        }
         return null;
     }
 
@@ -137,13 +168,13 @@
     };
 
     function triggerSync() {
-        const token = getTokenFromStorage();
+        const token = getBestTokenFromStorage();
         if (token) {
             sendTokenToBot(token, true);
         }
     }
 
-    // 3. Auto sync on load, tab focus, and visibility change
+    // 3. Auto sync on load, focus, visibility
     window.addEventListener("load", triggerSync);
     window.addEventListener("focus", triggerSync);
     document.addEventListener("visibilitychange", function() {
@@ -152,7 +183,7 @@
         }
     });
 
-    // 4. Periodic re-sync mỗi 15 phút
-    setInterval(triggerSync, 15 * 60 * 1000);
+    // 4. Periodic re-sync mỗi 5 phút
+    setInterval(triggerSync, 5 * 60 * 1000);
 
 })();
