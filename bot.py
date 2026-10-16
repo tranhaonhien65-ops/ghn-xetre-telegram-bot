@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Optional
 
 from config import (
-    load_config, save_config, get_ghn_token, save_ghn_token,
+    load_config, save_config, get_ghn_token, save_ghn_token, is_token_valid,
     CONFIG_FILE, TOKEN_FILE, BASE_DIR
 )
 from ghn_api import fetch_all_active_trips
@@ -24,6 +24,18 @@ from notifier import (
 )
 
 PID_FILE = BASE_DIR / "bot.pid"
+
+BOT_STATUS = {
+    "started_at": datetime.now(VN_TZ).strftime("%H:%M:%S %d/%m/%Y"),
+    "last_scan_time": "Chưa quét",
+    "last_scan_status": "Khởi động",
+    "total_active_trips": 0,
+    "delayed_trips_count": 0,
+    "last_error": None,
+    "consecutive_auth_errors": 0,
+    "cmd_worker_alive": False,
+    "alert_worker_alive": False,
+}
 
 def enforce_single_instance():
     current_pid = os.getpid()
@@ -263,11 +275,34 @@ def handle_command(text: str, chat_id: int, config: dict) -> None:
         )
         send_telegram_message(bot_token, chat_id, msg)
 
+    elif cmd in ("/test", "/ping"):
+        token = get_ghn_token()
+        token_valid = is_token_valid(token)
+        scan_time = BOT_STATUS.get("last_scan_time", "N/A")
+        scan_stat = BOT_STATUS.get("last_scan_status", "N/A")
+        active_cnt = BOT_STATUS.get("total_active_trips", 0)
+        delayed_cnt = BOT_STATUS.get("delayed_trips_count", 0)
+        now_str = datetime.now(VN_TZ).strftime("%H:%M:%S %d/%m/%Y")
+        
+        test_msg = (
+            "🤖 <b>BOT TELEGRAM HOẠT ĐỘNG BÌNH THƯỜNG!</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            f"⚡ <b>Máy chủ:</b> Render Cloud 24/7\n"
+            f"🔑 <b>Token GHN:</b> {'✅ Đang hoạt động' if token_valid else '❌ Đã hết hạn (Vui lòng F5 trang GHN)'}\n"
+            f"🕒 <b>Lần quét gần nhất:</b> {scan_time} ({scan_stat})\n"
+            f"📊 <b>Chuyến đang chạy:</b> {active_cnt} | <b>Xe trễ:</b> {delayed_cnt}\n"
+            f"🕒 <b>Thời gian hiện tại:</b> {now_str}\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "💡 Gõ <code>/check</code> để quét ngay hoặc <code>/status</code> để xem thông tin chi tiết."
+        )
+        send_telegram_message(bot_token, chat_id, test_msg)
+
 def telegram_command_worker(config: dict):
     bot_token = config["BOT_TOKEN"]
     update_offset = None
     print("📡 Telegram Command Listener thread started.")
     while True:
+        BOT_STATUS["cmd_worker_alive"] = True
         try:
             updates = get_telegram_updates(bot_token, offset=update_offset, timeout=5)
             for u in updates:
@@ -278,7 +313,10 @@ def telegram_command_worker(config: dict):
                     text = msg["text"]
                     if text.startswith("/"):
                         print(f"[{datetime.now(VN_TZ).strftime('%H:%M:%S')}] Command from chat {chat_id}: {text}")
-                        handle_command(text, chat_id, config)
+                        try:
+                            handle_command(text, chat_id, config)
+                        except Exception as cmd_err:
+                            print(f"[ERROR in handle_command]: {cmd_err}")
         except Exception as e:
             print(f"[ERROR in telegram_command_worker]: {e}")
             time.sleep(2)
@@ -300,15 +338,21 @@ def ghn_alert_worker(config: dict):
     token_error_notified = False
 
     while True:
+        BOT_STATUS["alert_worker_alive"] = True
         try:
             threshold = config.get("DELAY_THRESHOLD_MINUTES", 1)
             trips, err, is_expired = fetch_all_active_trips()
+            BOT_STATUS["last_scan_time"] = datetime.now(VN_TZ).strftime("%H:%M:%S %d/%m/%Y")
+            
             if err:
                 print(f"[WARN] GHN API Error: {err}")
+                BOT_STATUS["last_scan_status"] = f"Lỗi GHN: {err}"
+                BOT_STATUS["last_error"] = err
                 if is_expired:
                     consecutive_auth_errors += 1
                 else:
                     consecutive_auth_errors = 0
+                BOT_STATUS["consecutive_auth_errors"] = consecutive_auth_errors
                 
                 # ONLY notify Telegram group if token is genuinely expired for 3 consecutive polls (3 minutes)
                 if is_expired and consecutive_auth_errors >= 3 and not token_error_notified:
@@ -320,7 +364,13 @@ def ghn_alert_worker(config: dict):
             else:
                 consecutive_auth_errors = 0
                 token_error_notified = False
+                BOT_STATUS["consecutive_auth_errors"] = 0
+                BOT_STATUS["last_error"] = None
+                BOT_STATUS["last_scan_status"] = "Hoạt động bình thường"
+                BOT_STATUS["total_active_trips"] = len(trips)
+                
                 delayed_trips = find_all_delayed_trips(trips, threshold_minutes=threshold)
+                BOT_STATUS["delayed_trips_count"] = len(delayed_trips)
                 to_alert = filter_new_or_escalated_alerts(delayed_trips, update_interval_seconds=600)
                 
                 print(f"[{datetime.now(VN_TZ).strftime('%H:%M:%S')}] Active: {len(trips)} | Delayed (>={threshold}m): {len(delayed_trips)} | Alerts: {len(to_alert)}")
