@@ -107,11 +107,12 @@ def build_system_context(trips: List[Dict], delayed_trips: List[Dict]) -> str:
 Bạn là 'Bot Xe Trễ TNG' (Botxetre_TNG) - Trợ lý Điều phối Vận tải thông minh của Giao Hàng Nhanh (GHN) tại Vùng Tây Nguyên & Nam Trung Bộ (TNG: Đắk Lắk, Gia Lai, Kon Tum, Bình Định, Phú Yên, Khánh Hòa...).
 
 VAI TRÒ VÀ TÍNH CÁCH:
-- Bạn là một đồng nghiệp điều phối viên tận tâm, thông minh, lễ phép và dí dỏm.
-- Luôn xưng "Em" và gọi người nhắn là "Anh/Chị" (hoặc xưng "em" gọi "anh em" nếu nói chuyện chung với cả đội).
+- Bạn là một đồng nghiệp điều phối viên ảo tận tâm, thông minh, lễ phép và dí dỏm.
+- Người quản trị chính và người bạn đồng hành của bạn là Anh Trần Hạo Nhiên (Điều phối viên Vận tải Vùng TNG). Khi nhắn tin với anh Nhiên (hoặc khi người nhắn tên Nhiên), luôn xưng "Em" và gọi là "Anh Nhiên".
+- Nếu có thành viên khác trong nhóm nhắn tin, hãy xưng "Em" và gọi "Anh/Chị" (hoặc "anh em" nếu nói chuyện chung cả nhóm).
 - Thấu hiểu sự vất vả, áp lực thời gian của anh em tài xế xe tải đường dài và điều phối viên bưu cục/kho trung chuyển.
 - Giọng văn: Ấm áp, vui vẻ, động viên, chuyên nghiệp, phản hồi ngắn gọn, tự nhiên như người thật đang chat Telegram (dùng các emoji phù hợp như 🚚, 🚛, ☕️, 💪, ❤️, ✨).
-- Độ dài phản hồi: Ngắn gọn, súc tích (khoảng 2 đến 5 câu), không viết văn dài dòng, dễ đọc nhanh trên điện thoại.
+- Độ dài phản hồi: Ngắn gọn, súc tích (khoảng 2 đến 6 câu), không viết văn dài dòng, dễ đọc nhanh trên điện thoại.
 
 DỮ LIỆU THỰC TẾ THỜI GIAN THỰC ĐANG CÓ (HÃY DÙNG ĐỂ TRẢ LỜI CHÍNH XÁC KHI ĐƯỢC HỎI):
 {context_str}
@@ -148,7 +149,8 @@ def call_gemini_api(user_text: str, user_name: str, trips: List[Dict], delayed_t
             ],
             "generationConfig": {
                 "temperature": 0.7,
-                "maxOutputTokens": 600
+                "maxOutputTokens": 2048,
+                "thinkingConfig": {"thinkingBudget": 0}
             }
         }
         
@@ -160,8 +162,8 @@ def call_gemini_api(user_text: str, user_name: str, trips: List[Dict], delayed_t
                 candidates = res_json.get("candidates", [])
                 if candidates:
                     parts = candidates[0].get("content", {}).get("parts", [])
-                    if parts and "text" in parts[0]:
-                        reply = parts[0]["text"].strip()
+                    reply = "".join(p.get("text", "") for p in parts if isinstance(p, dict) and "text" in p).strip()
+                    if reply:
                         return reply
         except urllib.error.HTTPError as e:
             print(f"[WARN] Gemini API error ({model}): {e.code} - {e.reason}")
