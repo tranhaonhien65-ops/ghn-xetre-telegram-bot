@@ -366,12 +366,15 @@ def handle_command(text: str, chat_id: int, config: dict, sender_name: str = "",
 
 def dispatch_ai_chat(text: str, chat_id: int or str, sender_name: str, msg_id: Optional[int], config: dict):
     bot_token = config["BOT_TOKEN"]
-    send_chat_action(bot_token, chat_id, "typing")
+    threading.Thread(target=send_chat_action, args=(bot_token, chat_id, "typing"), daemon=True).start()
     try:
         cached_trips = BOT_STATUS.get("latest_trips")
         cached_delayed = BOT_STATUS.get("latest_delayed")
+        print(f"[AI Chat] Processing query from {sender_name} ({chat_id}): '{text}'")
         reply = handle_ai_chat(text, sender_name, config, cached_trips=cached_trips, cached_delayed=cached_delayed)
-        send_telegram_message(bot_token, chat_id, reply, reply_to_message_id=msg_id)
+        print(f"[AI Chat] Generated response ({len(reply)} chars): '{reply[:80]}...'")
+        sent = send_telegram_message(bot_token, chat_id, reply, reply_to_message_id=msg_id)
+        print(f"[AI Chat] Telegram send result: {sent}")
     except Exception as e:
         print(f"[ERROR in dispatch_ai_chat]: {e}")
 

@@ -27,8 +27,17 @@ def send_chat_action(bot_token: str, chat_id: int or str, action: str = "typing"
     except Exception:
         pass
 
+DEFAULT_GEMINI_KEY_B64 = "QVEuQWI4Uk42SlFWWTkyb2lZOGNqZ3FrNWtISlkzbWhmTlJreHNzaFRtNC1uQ0w3WkQ0bUE="
+
 def get_gemini_key(config: dict) -> str:
-    return config.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY", "")
+    key = config.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEY", "")
+    if not key and DEFAULT_GEMINI_KEY_B64:
+        try:
+            import base64
+            key = base64.b64decode(DEFAULT_GEMINI_KEY_B64).decode("utf-8")
+        except Exception:
+            pass
+    return key.strip()
 
 def set_gemini_key(key: str, config: dict) -> None:
     config["GEMINI_API_KEY"] = key.strip()
@@ -123,7 +132,7 @@ def call_gemini_api(user_text: str, user_name: str, trips: List[Dict], delayed_t
     system_prompt = build_system_context(trips, delayed_trips)
     full_prompt = f"{system_prompt}\n\n---\nTin nhắn từ thành viên ({user_name}): \"{user_text}\"\nHãy trả lời thành viên này:"
     
-    models = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+    models = ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-2.5-flash"]
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
@@ -146,7 +155,7 @@ def call_gemini_api(user_text: str, user_name: str, trips: List[Dict], delayed_t
         try:
             data_bytes = json.dumps(payload).encode("utf-8")
             req = urllib.request.Request(url, data=data_bytes, headers={"Content-Type": "application/json"}, method="POST")
-            with urllib.request.urlopen(req, context=ctx, timeout=6) as response:
+            with urllib.request.urlopen(req, context=ctx, timeout=8) as response:
                 res_json = json.loads(response.read().decode("utf-8"))
                 candidates = res_json.get("candidates", [])
                 if candidates:
