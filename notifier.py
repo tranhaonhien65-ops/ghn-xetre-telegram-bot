@@ -15,6 +15,7 @@ def send_telegram_message(bot_token: str, chat_id: int or str, text: str, parse_
     """Sends a message via Telegram Bot API using urllib, with automatic fallback to plain text if HTML parsing fails."""
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     
+    current_reply_id = reply_to_message_id
     for mode in [parse_mode, None]:
         clean_text = text if mode else re.sub(r'<[^>]+>', '', text)
         payload = {
@@ -22,8 +23,8 @@ def send_telegram_message(bot_token: str, chat_id: int or str, text: str, parse_
             "text": clean_text,
             "disable_web_page_preview": True
         }
-        if reply_to_message_id:
-            payload["reply_to_message_id"] = reply_to_message_id
+        if current_reply_id:
+            payload["reply_to_message_id"] = current_reply_id
         if mode:
             payload["parse_mode"] = mode
             
@@ -40,12 +41,13 @@ def send_telegram_message(bot_token: str, chat_id: int or str, text: str, parse_
                 if res_data.get("ok"):
                     return True
         except urllib.error.HTTPError as e:
-            if e.code == 400 and mode == "HTML":
-                # Fallback to plain text on next attempt
+            current_reply_id = None
+            if e.code == 400:
                 continue
             print(f"[ERROR] Failed to send Telegram message: {e}")
             break
         except Exception as e:
+            current_reply_id = None
             print(f"[ERROR] Failed to send Telegram message: {e}")
             break
             

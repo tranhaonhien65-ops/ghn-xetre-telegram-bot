@@ -23,7 +23,7 @@ from notifier import (
     send_telegram_message, format_single_trip_alert,
     format_summary_report, filter_new_or_escalated_alerts
 )
-from ai_chat import handle_ai_chat, send_chat_action, set_gemini_key, get_gemini_key
+from ai_chat import handle_ai_chat, send_chat_action, set_gemini_key, get_gemini_key, validate_gemini_key
 
 PID_FILE = BASE_DIR / "bot.pid"
 
@@ -328,6 +328,23 @@ def handle_command(text: str, chat_id: int, config: dict, sender_name: str = "",
             return
         
         new_key = args.strip()
+        send_telegram_message(bot_token, chat_id, "⏳ <i>Đang kiểm tra kết nối với Google AI...</i>", reply_to_message_id=msg_id)
+        is_ok, err_desc = validate_gemini_key(new_key)
+        if not is_ok:
+            if "GEMINI_API_KEY" in config:
+                config.pop("GEMINI_API_KEY", None)
+                save_config(config)
+            send_telegram_message(
+                bot_token, chat_id,
+                f"⚠️ <b>MÃ KEY CHƯA KÍCH HOẠT ĐƯỢC:</b>\n<i>{err_desc}</i>\n\n"
+                "💡 <b>Lưu ý quan trọng:</b>\n"
+                "Mã API Key chuẩn của Google luôn bắt đầu bằng <b><code>AIzaSy...</code></b>.\n"
+                "👉 Bạn vui lòng vào lại trang <code>https://aistudio.google.com/apikey</code>, bấm nút <b>+ Create API key</b> (góc trên bên phải) để tạo một Key mới chuẩn nhé!\n\n"
+                "<i>(Trong lúc này, Trợ lý ảo tích hợp của bot vẫn đang hoạt động trả lời về xe cộ bình thường ạ!)</i>",
+                reply_to_message_id=msg_id
+            )
+            return
+
         set_gemini_key(new_key, config)
         send_telegram_message(
             bot_token, chat_id,
@@ -351,7 +368,9 @@ def dispatch_ai_chat(text: str, chat_id: int or str, sender_name: str, msg_id: O
     bot_token = config["BOT_TOKEN"]
     send_chat_action(bot_token, chat_id, "typing")
     try:
-        reply = handle_ai_chat(text, sender_name, config)
+        cached_trips = BOT_STATUS.get("latest_trips")
+        cached_delayed = BOT_STATUS.get("latest_delayed")
+        reply = handle_ai_chat(text, sender_name, config, cached_trips=cached_trips, cached_delayed=cached_delayed)
         send_telegram_message(bot_token, chat_id, reply, reply_to_message_id=msg_id)
     except Exception as e:
         print(f"[ERROR in dispatch_ai_chat]: {e}")
@@ -460,9 +479,11 @@ def ghn_alert_worker(config: dict):
                 BOT_STATUS["last_error"] = None
                 BOT_STATUS["last_scan_status"] = "Hoạt động bình thường"
                 BOT_STATUS["total_active_trips"] = len(trips)
+                BOT_STATUS["latest_trips"] = trips
                 
                 delayed_trips = find_all_delayed_trips(trips, threshold_minutes=threshold)
                 BOT_STATUS["delayed_trips_count"] = len(delayed_trips)
+                BOT_STATUS["latest_delayed"] = delayed_trips
                 to_alert = filter_new_or_escalated_alerts(delayed_trips, update_interval_seconds=600)
                 
                 print(f"[{datetime.now(VN_TZ).strftime('%H:%M:%S')}] Active: {len(trips)} | Delayed (>={threshold}m): {len(delayed_trips)} | Alerts: {len(to_alert)}")

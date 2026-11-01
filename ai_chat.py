@@ -34,6 +34,34 @@ def set_gemini_key(key: str, config: dict) -> None:
     config["GEMINI_API_KEY"] = key.strip()
     save_config(config)
 
+def validate_gemini_key(api_key: str) -> tuple:
+    """Verifies if an API key is valid by calling Google Generative Language API."""
+    if not api_key:
+        return False, "Mã Key không được để trống"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+    payload = {
+        "contents": [{"role": "user", "parts": [{"text": "hi"}]}],
+        "generationConfig": {"maxOutputTokens": 5}
+    }
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    try:
+        data_bytes = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(url, data=data_bytes, headers={"Content-Type": "application/json"}, method="POST")
+        with urllib.request.urlopen(req, context=ctx, timeout=6) as response:
+            return True, "OK"
+    except urllib.error.HTTPError as e:
+        err_msg = e.reason
+        try:
+            err_body = json.loads(e.read().decode("utf-8"))
+            err_msg = err_body.get("error", {}).get("message", e.reason)
+        except Exception:
+            pass
+        return False, f"HTTP {e.code}: {err_msg}"
+    except Exception as e:
+        return False, str(e)
+
 def build_system_context(trips: List[Dict], delayed_trips: List[Dict]) -> str:
     """Builds rich real-time context of GHN operations for Gemini."""
     now_str = datetime.now(VN_TZ).strftime("%H:%M:%S ngày %d/%m/%Y")
@@ -123,7 +151,7 @@ def call_gemini_api(user_text: str, user_name: str, trips: List[Dict], delayed_t
         try:
             data_bytes = json.dumps(payload).encode("utf-8")
             req = urllib.request.Request(url, data=data_bytes, headers={"Content-Type": "application/json"}, method="POST")
-            with urllib.request.urlopen(req, context=ctx, timeout=12) as response:
+            with urllib.request.urlopen(req, context=ctx, timeout=6) as response:
                 res_json = json.loads(response.read().decode("utf-8"))
                 candidates = res_json.get("candidates", [])
                 if candidates:
@@ -133,6 +161,9 @@ def call_gemini_api(user_text: str, user_name: str, trips: List[Dict], delayed_t
                         return reply
         except urllib.error.HTTPError as e:
             print(f"[WARN] Gemini API error ({model}): {e.code} - {e.reason}")
+            if e.code in (400, 401, 403):
+                # Invalid or unauthorized key: do NOT retry another model, break immediately!
+                break
         except Exception as e:
             print(f"[WARN] Gemini API call failed ({model}): {e}")
             
@@ -260,11 +291,15 @@ def fallback_human_chat(user_text: str, user_name: str, trips: List[Dict], delay
         f"💡 <i>Mẹo: Anh Hạo Nhiên có thể gửi lệnh <code>/gemini &lt;API_KEY&gt;</code> để mở khóa trí tuệ Google Gemini siêu thông minh cho em chém gió mọi chủ đề như ChatGPT luôn nhé ạ!</i>"
     )
 
-def handle_ai_chat(user_text: str, user_name: str, config: dict) -> str:
+def handle_ai_chat(user_text: str, user_name: str, config: dict, cached_trips: Optional[List[Dict]] = None, cached_delayed: Optional[List[Dict]] = None) -> str:
     """Main AI conversational router."""
-    trips, _, _ = fetch_all_active_trips()
-    threshold = config.get("DELAY_THRESHOLD_MINUTES", 1)
-    delayed_trips = find_all_delayed_trips(trips, threshold_minutes=threshold)
+    if cached_trips is not None and cached_delayed is not None:
+        trips = cached_trips
+        delayed_trips = cached_delayed
+    else:
+        trips, _, _ = fetch_all_active_trips()
+        threshold = config.get("DELAY_THRESHOLD_MINUTES", 1)
+        delayed_trips = find_all_delayed_trips(trips, threshold_minutes=threshold)
     
     # Check if Gemini API key exists
     gemini_key = get_gemini_key(config)
