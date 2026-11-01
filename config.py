@@ -12,7 +12,8 @@ DEFAULT_CONFIG = {
     "GROUP_ID": -5311462943,
     "POLL_INTERVAL_SECONDS": 60,
     "DELAY_THRESHOLD_MINUTES": 1,
-    "SILENT_ALERTS": False
+    "SILENT_ALERTS": False,
+    "AI_CHAT_ENABLED": False
 }
 
 def load_config():

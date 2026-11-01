@@ -416,29 +416,30 @@ def telegram_command_worker(config: dict):
                     except Exception as cmd_err:
                         print(f"[ERROR in handle_command]: {cmd_err}")
                 else:
-                    lower_text = raw_text.lower()
-                    is_private = (chat_type == "private") or (isinstance(chat_id, int) and chat_id > 0)
-                    is_tagged = ("@xetretng_bot" in lower_text)
-                    is_reply_to_bot = False
-                    if reply_to:
-                        rep_from = reply_to.get("from", {})
-                        if rep_from.get("is_bot") or rep_from.get("username", "").lower() == "xetretng_bot" or rep_from.get("id") == 8806856427:
-                            is_reply_to_bot = True
-                    is_called = any(lower_text.startswith(p) for p in [
-                        "bot ơi", "bot oi", "ơi bot", "oi bot", "ê bot", "e bot", 
-                        "alo bot", "bot xem", "bot kiểm tra", "bot cho hỏi", "bot tra cứu", "chào bot"
-                    ])
-                    
-                    if is_private or is_tagged or is_reply_to_bot or is_called:
-                        clean_text = re.sub(r'@xetretng_bot', '', raw_text, flags=re.IGNORECASE).strip()
-                        if not clean_text:
-                            clean_text = "Chào bot"
-                        print(f"[{datetime.now(VN_TZ).strftime('%H:%M:%S')}] AI Chat from {sender_name} ({chat_id}): {clean_text}")
-                        threading.Thread(
-                            target=dispatch_ai_chat,
-                            args=(clean_text, chat_id, sender_name, msg_id, config),
-                            daemon=True
-                        ).start()
+                    if config.get("AI_CHAT_ENABLED", False):
+                        lower_text = raw_text.lower()
+                        is_private = (chat_type == "private") or (isinstance(chat_id, int) and chat_id > 0)
+                        is_tagged = ("@xetretng_bot" in lower_text)
+                        is_reply_to_bot = False
+                        if reply_to:
+                            rep_from = reply_to.get("from", {})
+                            if rep_from.get("is_bot") or rep_from.get("username", "").lower() == "xetretng_bot" or rep_from.get("id") == 8806856427:
+                                is_reply_to_bot = True
+                        is_called = any(lower_text.startswith(p) for p in [
+                            "bot ơi", "bot oi", "ơi bot", "oi bot", "ê bot", "e bot", 
+                            "alo bot", "bot xem", "bot kiểm tra", "bot cho hỏi", "bot tra cứu", "chào bot"
+                        ])
+                        
+                        if is_private or is_tagged or is_reply_to_bot or is_called:
+                            clean_text = re.sub(r'@xetretng_bot', '', raw_text, flags=re.IGNORECASE).strip()
+                            if not clean_text:
+                                clean_text = "Chào bot"
+                            print(f"[{datetime.now(VN_TZ).strftime('%H:%M:%S')}] AI Chat from {sender_name} ({chat_id}): {clean_text}")
+                            threading.Thread(
+                                target=dispatch_ai_chat,
+                                args=(clean_text, chat_id, sender_name, msg_id, config),
+                                daemon=True
+                            ).start()
         except Exception as e:
             print(f"[ERROR in telegram_command_worker]: {e}")
             time.sleep(2)
