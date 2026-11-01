@@ -375,8 +375,16 @@ def dispatch_ai_chat(text: str, chat_id: int or str, sender_name: str, msg_id: O
         print(f"[AI Chat] Generated response ({len(reply)} chars): '{reply[:80]}...'")
         sent = send_telegram_message(bot_token, chat_id, reply, reply_to_message_id=msg_id)
         print(f"[AI Chat] Telegram send result: {sent}")
+        if not sent:
+            clean_reply = re.sub(r'<[^>]+>', '', reply)
+            send_telegram_message(bot_token, chat_id, clean_reply, parse_mode=None, reply_to_message_id=None)
     except Exception as e:
         print(f"[ERROR in dispatch_ai_chat]: {e}")
+        try:
+            err_fallback = f"Dạ em nghe rõ anh/chị {sender_name} rồi ạ! Em vẫn đang túc trực theo dõi xe Vùng TNG 24/7 nhé! 🚚✨"
+            send_telegram_message(bot_token, chat_id, err_fallback, parse_mode=None)
+        except Exception:
+            pass
 
 def telegram_command_worker(config: dict):
     bot_token = config["BOT_TOKEN"]
@@ -409,7 +417,7 @@ def telegram_command_worker(config: dict):
                         print(f"[ERROR in handle_command]: {cmd_err}")
                 else:
                     lower_text = raw_text.lower()
-                    is_private = (chat_type == "private")
+                    is_private = (chat_type == "private") or (isinstance(chat_id, int) and chat_id > 0)
                     is_tagged = ("@xetretng_bot" in lower_text)
                     is_reply_to_bot = False
                     if reply_to:

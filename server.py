@@ -4,6 +4,7 @@ import threading
 import json
 import time
 import ssl
+import collections
 import urllib.request
 from datetime import datetime, timezone, timedelta
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -12,6 +13,28 @@ from bot import run_bot, BOT_STATUS
 
 PORT = int(os.environ.get("PORT", 8080))
 VN_TZ = timezone(timedelta(hours=7))
+
+RECENT_LOGS = collections.deque(maxlen=100)
+
+class LogCapture:
+    def __init__(self, original_stream):
+        self.original_stream = original_stream
+    def write(self, s):
+        if s and s.strip():
+            now_str = datetime.now(VN_TZ).strftime("%H:%M:%S")
+            RECENT_LOGS.append(f"[{now_str}] {s.strip()}")
+        try:
+            self.original_stream.write(s)
+        except Exception:
+            pass
+    def flush(self):
+        try:
+            self.original_stream.flush()
+        except Exception:
+            pass
+
+sys.stdout = LogCapture(sys.stdout)
+sys.stderr = LogCapture(sys.stderr)
 
 class ReusableThreadingServer(ThreadingHTTPServer):
     allow_reuse_address = True
@@ -62,7 +85,8 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
             "service": "GHN Late Truck Telegram Bot Cloud Worker",
             "uptime": "24/7",
             "token": token_info,
-            "bot_status": BOT_STATUS
+            "bot_status": BOT_STATUS,
+            "recent_logs": list(RECENT_LOGS)
         }
         self.wfile.write(json.dumps(res, ensure_ascii=False, indent=2).encode("utf-8"))
 

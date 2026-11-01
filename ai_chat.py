@@ -132,7 +132,7 @@ def call_gemini_api(user_text: str, user_name: str, trips: List[Dict], delayed_t
     system_prompt = build_system_context(trips, delayed_trips)
     full_prompt = f"{system_prompt}\n\n---\nTin nhắn từ thành viên ({user_name}): \"{user_text}\"\nHãy trả lời thành viên này:"
     
-    models = ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-2.5-flash"]
+    models = ["gemini-3.5-flash", "gemini-3.6-flash"]
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
@@ -155,7 +155,7 @@ def call_gemini_api(user_text: str, user_name: str, trips: List[Dict], delayed_t
         try:
             data_bytes = json.dumps(payload).encode("utf-8")
             req = urllib.request.Request(url, data=data_bytes, headers={"Content-Type": "application/json"}, method="POST")
-            with urllib.request.urlopen(req, context=ctx, timeout=8) as response:
+            with urllib.request.urlopen(req, context=ctx, timeout=15) as response:
                 res_json = json.loads(response.read().decode("utf-8"))
                 candidates = res_json.get("candidates", [])
                 if candidates:
