@@ -11,7 +11,7 @@ VN_TZ = timezone(timedelta(hours=7))
 import re
 import urllib.error
 
-def send_telegram_message(bot_token: str, chat_id: int or str, text: str, parse_mode: Optional[str] = "HTML") -> bool:
+def send_telegram_message(bot_token: str, chat_id: int or str, text: str, parse_mode: Optional[str] = "HTML", reply_to_message_id: Optional[int] = None) -> bool:
     """Sends a message via Telegram Bot API using urllib, with automatic fallback to plain text if HTML parsing fails."""
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     
@@ -22,6 +22,8 @@ def send_telegram_message(bot_token: str, chat_id: int or str, text: str, parse_
             "text": clean_text,
             "disable_web_page_preview": True
         }
+        if reply_to_message_id:
+            payload["reply_to_message_id"] = reply_to_message_id
         if mode:
             payload["parse_mode"] = mode
             

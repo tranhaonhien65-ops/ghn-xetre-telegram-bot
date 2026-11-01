@@ -4,6 +4,7 @@ import time
 import json
 import ssl
 import signal
+import re
 import threading
 import urllib.request
 import urllib.parse
@@ -22,6 +23,7 @@ from notifier import (
     send_telegram_message, format_single_trip_alert,
     format_summary_report, filter_new_or_escalated_alerts
 )
+from ai_chat import handle_ai_chat, send_chat_action, set_gemini_key, get_gemini_key
 
 PID_FILE = BASE_DIR / "bot.pid"
 
@@ -142,7 +144,7 @@ def get_telegram_updates(bot_token: str, offset: Optional[int] = None, timeout: 
         pass
     return []
 
-def handle_command(text: str, chat_id: int, config: dict) -> None:
+def handle_command(text: str, chat_id: int, config: dict, sender_name: str = "", msg_id: Optional[int] = None) -> None:
     bot_token = config["BOT_TOKEN"]
     text = text.strip()
     parts = text.split(maxsplit=1)
@@ -151,19 +153,24 @@ def handle_command(text: str, chat_id: int, config: dict) -> None:
 
     if cmd in ("/start", "/help"):
         help_msg = (
-            "🤖 <b>GHN VANTAI DELAY MONITOR BOT</b>\n"
+            "🤖 <b>GHN VANTAI DELAY MONITOR & AI BOT</b>\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
-            "📌 <b>Các lệnh khả dụng:</b>\n"
-            "🔹 <code>/check</code> hoặc <code>/tre</code>: Kiểm tra danh sách các chuyến xe đang trễ điểm ngay lập tức.\n"
-            "🔹 <code>/all</code>: Xem danh sách tổng quan toàn bộ xe đang chạy.\n"
-            "🔹 <code>/threshold &lt;phút&gt;</code>: Đổi ngưỡng lọc trễ (Mặc định: <code>/threshold 1</code>).\n"
-            "🔹 <code>/token &lt;token_ghn&gt;</code>: Cập nhật Bearer Token GHN bằng tay khi cần.\n"
+            "📌 <b>Các lệnh tra cứu:</b>\n"
+            "🔹 <code>/check</code> hoặc <code>/tre</code>: Kiểm tra danh sách xe đang trễ điểm.\n"
+            "🔹 <code>/all</code>: Xem danh sách toàn bộ xe đang chạy.\n"
             "🔹 <code>/status</code>: Xem tình trạng hoạt động và thời hạn Token.\n"
-            "🔹 <code>/group</code>: Lấy Chat ID của nhóm hiện tại.\n"
+            "🔹 <code>/test</code>: Kiểm tra phản hồi của Bot.\n"
+            "🔹 <code>/threshold &lt;phút&gt;</code>: Đổi ngưỡng lọc trễ (Mặc định: 1 phút).\n"
+            "🔹 <code>/token &lt;token&gt;</code>: Cập nhật Bearer Token GHN bằng tay.\n\n"
+            "💬 <b>Trò chuyện AI như người thật:</b>\n"
+            "🔹 Trong nhóm: Tag <code>@XetreTNG_Bot</code> hoặc <b>Reply</b> tin nhắn của bot để hỏi đáp/tâm sự.\n"
+            "🔹 Nhắn tin riêng 1-1 với bot thoải mái mọi lúc mọi nơi.\n"
+            "🔹 <code>/ai &lt;câu hỏi&gt;</code>: Gửi câu hỏi nhanh cho AI.\n"
+            "🔹 <code>/gemini &lt;API_KEY&gt;</code>: Kết nối bộ não Google Gemini (Miễn phí 100%).\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
-            f"⚙️ <i>Ngưỡng hiện tại: {config.get('DELAY_THRESHOLD_MINUTES', 1)} phút | Quét mỗi {config.get('POLL_INTERVAL_SECONDS', 60)}s | Nhắc lại mỗi 5 phút</i>"
+            f"⚙️ <i>Ngưỡng hiện tại: {config.get('DELAY_THRESHOLD_MINUTES', 1)}p | Quét mỗi {config.get('POLL_INTERVAL_SECONDS', 60)}s</i>"
         )
-        send_telegram_message(bot_token, chat_id, help_msg)
+        send_telegram_message(bot_token, chat_id, help_msg, reply_to_message_id=msg_id)
 
     elif cmd == "/group":
         send_telegram_message(bot_token, chat_id, f"🆔 Chat ID của cuộc trò chuyện này là: <code>{chat_id}</code>")
@@ -260,6 +267,8 @@ def handle_command(text: str, chat_id: int, config: dict) -> None:
         except Exception:
             pass
 
+        gemini_k = get_gemini_key(config)
+        ai_info = "Google Gemini Flash (Đã kết nối ⚡)" if gemini_k else "Trợ lý Điều phối ảo TNG (Sẵn sàng 💬)"
         now_str = datetime.now(VN_TZ).strftime("%H:%M:%S %d/%m/%Y")
         msg = (
             "📊 <b>TRẠNG THÁI HỆ THỐNG BOT</b>\n"
@@ -269,11 +278,12 @@ def handle_command(text: str, chat_id: int, config: dict) -> None:
             f"⏱️ <b>Chu kỳ quét:</b> {config.get('POLL_INTERVAL_SECONDS', 60)} giây\n"
             f"⏳ <b>Ngưỡng trễ:</b> {config.get('DELAY_THRESHOLD_MINUTES', 1)} phút (Nhắc lại mỗi 10p)\n"
             f"🔑 <b>Tài khoản GHN:</b> {token_info}\n"
+            f"🧠 <b>Trí tuệ nhân tạo (AI):</b> {ai_info}\n"
             f"📡 <b>Auto-Sync Server:</b> Hoạt động (Port 8989)\n"
             f"🕒 <b>Thời gian hiện tại:</b> {now_str}\n"
             "━━━━━━━━━━━━━━━━━━━━"
         )
-        send_telegram_message(bot_token, chat_id, msg)
+        send_telegram_message(bot_token, chat_id, msg, reply_to_message_id=msg_id)
 
     elif cmd in ("/test", "/ping"):
         token = get_ghn_token()
@@ -293,9 +303,58 @@ def handle_command(text: str, chat_id: int, config: dict) -> None:
             f"📊 <b>Chuyến đang chạy:</b> {active_cnt} | <b>Xe trễ:</b> {delayed_cnt}\n"
             f"🕒 <b>Thời gian hiện tại:</b> {now_str}\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
-            "💡 Gõ <code>/check</code> để quét ngay hoặc <code>/status</code> để xem thông tin chi tiết."
+            "💡 Gõ <code>/check</code> để quét ngay, tag <code>@XetreTNG_Bot</code> để trò chuyện trực tiếp!"
         )
-        send_telegram_message(bot_token, chat_id, test_msg)
+        send_telegram_message(bot_token, chat_id, test_msg, reply_to_message_id=msg_id)
+
+    elif cmd in ("/gemini", "/setgemini"):
+        if not args:
+            current_key = get_gemini_key(config)
+            has_key = bool(current_key)
+            masked = f"<code>{current_key[:6]}...{current_key[-4:]}</code> (Đang chạy tốt)" if has_key else "Chưa cài đặt (Đang dùng trợ lý tích hợp)"
+            guide = (
+                "🤖 <b>CÀI ĐẶT GOOGLE GEMINI AI CHO BOT</b>\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
+                f"🔑 <b>Trạng thái:</b> {masked}\n\n"
+                "💡 <b>Cách lấy Key hoàn toàn MIỄN PHÍ 100%:</b>\n"
+                "1. Vào trang: <code>https://aistudio.google.com/apikey</code>\n"
+                "2. Đăng nhập Gmail $\rightarrow$ Bấm <b>Create API Key</b>.\n"
+                "3. Sao chép và gửi lệnh vào đây:\n"
+                "   <code>/gemini &lt;API_KEY_CUA_BAN&gt;</code>\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
+                "✨ <i>Khi có Key, bot sẽ trò chuyện tự nhiên, hài hước và thông minh như ChatGPT/Gemini về mọi chủ đề!</i>"
+            )
+            send_telegram_message(bot_token, chat_id, guide, reply_to_message_id=msg_id)
+            return
+        
+        new_key = args.strip()
+        set_gemini_key(new_key, config)
+        send_telegram_message(
+            bot_token, chat_id,
+            "🎉 <b>KÍCH HOẠT GOOGLE GEMINI AI THÀNH CÔNG!</b>\n\n"
+            "Bộ não trí tuệ nhân tạo Google Gemini đã được kết nối với dữ liệu vận hành GHN Vùng TNG. "
+            "Bây giờ anh/chị có thể thoải mái tag <code>@XetreTNG_Bot</code> để trò chuyện, hỏi đáp và tâm sự như người thật rồi nhé! 🚀✨",
+            reply_to_message_id=msg_id
+        )
+
+    elif cmd in ("/ai", "/chat"):
+        if not args:
+            send_telegram_message(bot_token, chat_id, "ℹ️ Cách dùng: <code>/ai &lt;câu hỏi hoặc lời nhắn&gt;</code>\nHoặc chỉ cần tag <code>@XetreTNG_Bot &lt;nội dung&gt;</code> nha!", reply_to_message_id=msg_id)
+            return
+        threading.Thread(
+            target=dispatch_ai_chat,
+            args=(args, chat_id, sender_name, msg_id, config),
+            daemon=True
+        ).start()
+
+def dispatch_ai_chat(text: str, chat_id: int or str, sender_name: str, msg_id: Optional[int], config: dict):
+    bot_token = config["BOT_TOKEN"]
+    send_chat_action(bot_token, chat_id, "typing")
+    try:
+        reply = handle_ai_chat(text, sender_name, config)
+        send_telegram_message(bot_token, chat_id, reply, reply_to_message_id=msg_id)
+    except Exception as e:
+        print(f"[ERROR in dispatch_ai_chat]: {e}")
 
 def telegram_command_worker(config: dict):
     bot_token = config["BOT_TOKEN"]
@@ -308,15 +367,48 @@ def telegram_command_worker(config: dict):
             for u in updates:
                 update_offset = u["update_id"] + 1
                 msg = u.get("message")
-                if msg and "text" in msg:
-                    chat_id = msg["chat"]["id"]
-                    text = msg["text"]
-                    if text.startswith("/"):
-                        print(f"[{datetime.now(VN_TZ).strftime('%H:%M:%S')}] Command from chat {chat_id}: {text}")
-                        try:
-                            handle_command(text, chat_id, config)
-                        except Exception as cmd_err:
-                            print(f"[ERROR in handle_command]: {cmd_err}")
+                if not msg or "text" not in msg:
+                    continue
+                
+                chat = msg.get("chat", {})
+                chat_id = chat.get("id")
+                chat_type = chat.get("type", "group")
+                sender = msg.get("from", {})
+                sender_name = sender.get("first_name", "") or sender.get("username", "anh/chị")
+                raw_text = msg.get("text", "").strip()
+                msg_id = msg.get("message_id")
+                reply_to = msg.get("reply_to_message")
+                
+                if raw_text.startswith("/"):
+                    print(f"[{datetime.now(VN_TZ).strftime('%H:%M:%S')}] Command from chat {chat_id}: {raw_text}")
+                    try:
+                        handle_command(raw_text, chat_id, config, sender_name=sender_name, msg_id=msg_id)
+                    except Exception as cmd_err:
+                        print(f"[ERROR in handle_command]: {cmd_err}")
+                else:
+                    lower_text = raw_text.lower()
+                    is_private = (chat_type == "private")
+                    is_tagged = ("@xetretng_bot" in lower_text)
+                    is_reply_to_bot = False
+                    if reply_to:
+                        rep_from = reply_to.get("from", {})
+                        if rep_from.get("is_bot") or rep_from.get("username", "").lower() == "xetretng_bot" or rep_from.get("id") == 8806856427:
+                            is_reply_to_bot = True
+                    is_called = any(lower_text.startswith(p) for p in [
+                        "bot ơi", "bot oi", "ơi bot", "oi bot", "ê bot", "e bot", 
+                        "alo bot", "bot xem", "bot kiểm tra", "bot cho hỏi", "bot tra cứu", "chào bot"
+                    ])
+                    
+                    if is_private or is_tagged or is_reply_to_bot or is_called:
+                        clean_text = re.sub(r'@xetretng_bot', '', raw_text, flags=re.IGNORECASE).strip()
+                        if not clean_text:
+                            clean_text = "Chào bot"
+                        print(f"[{datetime.now(VN_TZ).strftime('%H:%M:%S')}] AI Chat from {sender_name} ({chat_id}): {clean_text}")
+                        threading.Thread(
+                            target=dispatch_ai_chat,
+                            args=(clean_text, chat_id, sender_name, msg_id, config),
+                            daemon=True
+                        ).start()
         except Exception as e:
             print(f"[ERROR in telegram_command_worker]: {e}")
             time.sleep(2)
