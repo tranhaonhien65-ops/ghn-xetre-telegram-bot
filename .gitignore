@@ -1,0 +1,5 @@
+*.pid
+*.log
+__pycache__/
+.DS_Store
+ghn_token.txt

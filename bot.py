@@ -423,7 +423,7 @@ def telegram_command_worker(config: dict):
                         is_reply_to_bot = False
                         if reply_to:
                             rep_from = reply_to.get("from", {})
-                            if rep_from.get("is_bot") or rep_from.get("username", "").lower() == "xetretng_bot" or rep_from.get("id") == 8806856427:
+                            if rep_from.get("is_bot") or rep_from.get("username", "").lower().endswith("bot"):
                                 is_reply_to_bot = True
                         is_called = any(lower_text.startswith(p) for p in [
                             "bot ơi", "bot oi", "ơi bot", "oi bot", "ê bot", "e bot", 

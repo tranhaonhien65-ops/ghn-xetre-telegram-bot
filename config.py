@@ -8,8 +8,8 @@ STATE_FILE = BASE_DIR / "bot_state.json"
 CONFIG_FILE = BASE_DIR / "config.json"
 
 DEFAULT_CONFIG = {
-    "BOT_TOKEN": "8806856427:AAHO34in208GSDHwgrH8Ena8sJhfEnc-kdw",
-    "GROUP_ID": -5311462943,
+    "BOT_TOKEN": os.environ.get("BOT_TOKEN", ""),
+    "GROUP_ID": int(os.environ.get("GROUP_ID", -5311462943)),
     "POLL_INTERVAL_SECONDS": 60,
     "DELAY_THRESHOLD_MINUTES": 1,
     "SILENT_ALERTS": False,
@@ -25,6 +25,8 @@ def load_config():
                 cfg.update(saved)
         except Exception as e:
             print(f"[WARN] Error loading config.json: {e}")
+    if os.environ.get("BOT_TOKEN"):
+        cfg["BOT_TOKEN"] = os.environ.get("BOT_TOKEN").strip()
     return cfg
 
 def save_config(cfg):
