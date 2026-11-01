@@ -4,6 +4,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 TOKEN_FILE = BASE_DIR / "ghn_token.txt"
+BOT_TOKEN_FILE = BASE_DIR / "bot_token.txt"
 STATE_FILE = BASE_DIR / "bot_state.json"
 CONFIG_FILE = BASE_DIR / "config.json"
 
@@ -16,18 +17,45 @@ DEFAULT_CONFIG = {
     "AI_CHAT_ENABLED": False
 }
 
+_LIVE_CONFIG = None
+
 def load_config():
-    cfg = DEFAULT_CONFIG.copy()
-    if CONFIG_FILE.exists():
-        try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                saved = json.load(f)
-                cfg.update(saved)
-        except Exception as e:
-            print(f"[WARN] Error loading config.json: {e}")
-    if os.environ.get("BOT_TOKEN"):
-        cfg["BOT_TOKEN"] = os.environ.get("BOT_TOKEN").strip()
-    return cfg
+    global _LIVE_CONFIG
+    if _LIVE_CONFIG is None:
+        cfg = DEFAULT_CONFIG.copy()
+        if CONFIG_FILE.exists():
+            try:
+                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                    saved = json.load(f)
+                    cfg.update(saved)
+            except Exception as e:
+                print(f"[WARN] Error loading config.json: {e}")
+        if BOT_TOKEN_FILE.exists():
+            try:
+                with open(BOT_TOKEN_FILE, "r", encoding="utf-8") as f:
+                    bt = f.read().strip()
+                    if bt:
+                        cfg["BOT_TOKEN"] = bt
+            except Exception as e:
+                print(f"[WARN] Error loading bot_token.txt: {e}")
+        if os.environ.get("BOT_TOKEN"):
+            cfg["BOT_TOKEN"] = os.environ.get("BOT_TOKEN").strip()
+        _LIVE_CONFIG = cfg
+    return _LIVE_CONFIG
+
+def set_bot_token(new_token: str) -> bool:
+    global _LIVE_CONFIG
+    if not new_token or len(new_token.strip()) < 10:
+        return False
+    clean = new_token.strip()
+    cfg = load_config()
+    cfg["BOT_TOKEN"] = clean
+    try:
+        with open(BOT_TOKEN_FILE, "w", encoding="utf-8") as f:
+            f.write(clean)
+    except Exception as e:
+        print(f"[WARN] Error saving bot_token.txt: {e}")
+    return True
 
 def save_config(cfg):
     try:

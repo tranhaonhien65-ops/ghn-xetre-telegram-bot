@@ -387,11 +387,14 @@ def dispatch_ai_chat(text: str, chat_id: int or str, sender_name: str, msg_id: O
             pass
 
 def telegram_command_worker(config: dict):
-    bot_token = config["BOT_TOKEN"]
     update_offset = None
     print("📡 Telegram Command Listener thread started.")
     while True:
         BOT_STATUS["cmd_worker_alive"] = True
+        bot_token = config.get("BOT_TOKEN", "").strip()
+        if not bot_token:
+            time.sleep(5)
+            continue
         try:
             updates = get_telegram_updates(bot_token, offset=update_offset, timeout=5)
             for u in updates:
@@ -446,10 +449,6 @@ def telegram_command_worker(config: dict):
         time.sleep(0.5)
 
 def ghn_alert_worker(config: dict):
-    bot_token = config["BOT_TOKEN"]
-    group_id = config["GROUP_ID"]
-    poll_interval = config.get("POLL_INTERVAL_SECONDS", 60)
-    
     # ── Startup grace period ─────────────────────────────────────────────────
     STARTUP_GRACE = 60
     print(f"⏳ Startup grace: waiting {STARTUP_GRACE}s before first alert scan...")
@@ -462,6 +461,9 @@ def ghn_alert_worker(config: dict):
 
     while True:
         BOT_STATUS["alert_worker_alive"] = True
+        bot_token = config.get("BOT_TOKEN", "").strip()
+        group_id = config.get("GROUP_ID", -5311462943)
+        poll_interval = config.get("POLL_INTERVAL_SECONDS", 60)
         try:
             threshold = config.get("DELAY_THRESHOLD_MINUTES", 1)
             trips, err, is_expired = fetch_all_active_trips()

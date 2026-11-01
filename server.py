@@ -8,7 +8,7 @@ import collections
 import urllib.request
 from datetime import datetime, timezone, timedelta
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
-from config import get_ghn_token, save_ghn_token, is_token_valid, load_config
+from config import get_ghn_token, save_ghn_token, is_token_valid, load_config, set_bot_token
 from bot import run_bot, BOT_STATUS
 
 PORT = int(os.environ.get("PORT", 8080))
@@ -80,10 +80,16 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
         except Exception as e:
             token_info["error"] = str(e)
 
+        cfg = load_config()
+        current_bot_token = cfg.get("BOT_TOKEN", "").strip()
         res = {
             "status": "online",
             "service": "GHN Late Truck Telegram Bot Cloud Worker",
             "uptime": "24/7",
+            "telegram_bot": {
+                "configured": bool(current_bot_token),
+                "preview": f"{current_bot_token[:8]}...{current_bot_token[-4:]}" if current_bot_token else None
+            },
             "token": token_info,
             "bot_status": BOT_STATUS,
             "recent_logs": list(RECENT_LOGS)
@@ -91,6 +97,31 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(res, ensure_ascii=False, indent=2).encode("utf-8"))
 
     def do_POST(self):
+        if self.path in ("/update_bot_token", "/bot_token"):
+            try:
+                content_len = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_len).decode("utf-8")
+                data = json.loads(body)
+                raw_token = data.get("token", "").strip()
+                if raw_token and len(raw_token) > 10:
+                    set_bot_token(raw_token)
+                    print(f"🤖 [CLOUD] Đã nhận và nạp Bot Token Telegram mới ({raw_token[:8]}...)!")
+                    self.send_response(200)
+                    self._send_cors()
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"status": "success", "message": "Bot token updated on cloud"}).encode("utf-8"))
+                    return
+                else:
+                    self.send_response(400)
+                    self._send_cors()
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"status": "error", "message": "Invalid token"}).encode("utf-8"))
+                    return
+            except Exception as e:
+                print(f"[ERROR] Cloud Bot Token update error: {e}")
+
         if self.path in ("/update_token", "/token"):
             try:
                 content_len = int(self.headers.get("Content-Length", 0))
