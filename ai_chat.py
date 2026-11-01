@@ -38,17 +38,12 @@ def validate_gemini_key(api_key: str) -> tuple:
     """Verifies if an API key is valid by calling Google Generative Language API."""
     if not api_key:
         return False, "Mã Key không được để trống"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
-    payload = {
-        "contents": [{"role": "user", "parts": [{"text": "hi"}]}],
-        "generationConfig": {"maxOutputTokens": 5}
-    }
+    url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
     try:
-        data_bytes = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(url, data=data_bytes, headers={"Content-Type": "application/json"}, method="POST")
+        req = urllib.request.Request(url, headers={"User-Agent": "GeminiTester/1.0"})
         with urllib.request.urlopen(req, context=ctx, timeout=6) as response:
             return True, "OK"
     except urllib.error.HTTPError as e:
@@ -128,7 +123,7 @@ def call_gemini_api(user_text: str, user_name: str, trips: List[Dict], delayed_t
     system_prompt = build_system_context(trips, delayed_trips)
     full_prompt = f"{system_prompt}\n\n---\nTin nhắn từ thành viên ({user_name}): \"{user_text}\"\nHãy trả lời thành viên này:"
     
-    models = ["gemini-2.0-flash", "gemini-1.5-flash"]
+    models = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
