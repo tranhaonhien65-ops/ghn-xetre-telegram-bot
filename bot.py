@@ -126,7 +126,7 @@ def start_token_server(port=8989):
 
 # ----------------- TELEGRAM POLLING & COMMANDS -----------------
 def get_telegram_updates(bot_token: str, offset: Optional[int] = None, timeout: int = 10) -> list:
-    url = f"https://api.telegram.org/bot{bot_token}/getUpdates?timeout={timeout}"
+    url = f"https://api.telegram.org/bot{bot_token}/getUpdates?timeout={timeout}&allowed_updates=%5B%22message%22%2C%22edited_message%22%2C%22my_chat_member%22%2C%22chat_member%22%5D"
     if offset is not None:
         url += f"&offset={offset}"
     
@@ -399,6 +399,19 @@ def telegram_command_worker(config: dict):
             updates = get_telegram_updates(bot_token, offset=update_offset, timeout=5)
             for u in updates:
                 update_offset = u["update_id"] + 1
+                
+                mcm = u.get("my_chat_member")
+                if mcm:
+                    chat = mcm.get("chat", {})
+                    cid = chat.get("id")
+                    title = chat.get("title", "")
+                    ctype = chat.get("type", "")
+                    print(f"🎉 [MY_CHAT_MEMBER] Bot updated in chat {cid} ({title}) [type={ctype}]")
+                    if ctype in ("group", "supergroup") and config.get("GROUP_ID") != cid:
+                        print(f"🎯 [AUTO-CONFIG] Updated GROUP_ID to {cid} ({title})")
+                        config["GROUP_ID"] = cid
+                        save_config(config)
+
                 msg = u.get("message")
                 if not msg or "text" not in msg:
                     continue
@@ -406,6 +419,10 @@ def telegram_command_worker(config: dict):
                 chat = msg.get("chat", {})
                 chat_id = chat.get("id")
                 chat_type = chat.get("type", "group")
+                if chat_type in ("group", "supergroup") and config.get("GROUP_ID") != chat_id:
+                    print(f"🎯 [AUTO-CONFIG] Message from group, updated GROUP_ID to {chat_id} ({chat.get('title')})")
+                    config["GROUP_ID"] = chat_id
+                    save_config(config)
                 sender = msg.get("from", {})
                 sender_name = sender.get("first_name", "") or sender.get("username", "anh/chị")
                 raw_text = msg.get("text", "").strip()

@@ -42,9 +42,14 @@ def send_telegram_message(bot_token: str, chat_id: int or str, text: str, parse_
                     return True
         except urllib.error.HTTPError as e:
             current_reply_id = None
-            if e.code == 400:
+            err_body = ""
+            try:
+                err_body = e.read().decode("utf-8")
+            except Exception:
+                pass
+            print(f"[ERROR] Failed to send Telegram message to {chat_id}: {e.code} {e.reason} - {err_body}")
+            if e.code == 400 and ("can't parse" in err_body.lower() or "entity" in err_body.lower()):
                 continue
-            print(f"[ERROR] Failed to send Telegram message: {e}")
             break
         except Exception as e:
             current_reply_id = None
