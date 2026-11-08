@@ -30,11 +30,51 @@ def get_sso_token():
         return GHN_TOKEN_FILE.read_text(encoding="utf-8").strip()
     return ""
 
-def get_metabase_jwt():
+def get_metabase_jwt(force_refresh=False):
+    # 1. Kiểm tra JWT hiện tại nếu còn hạn trên 15 phút
+    if not force_refresh and METABASE_JWT_FILE.exists():
+        try:
+            token = METABASE_JWT_FILE.read_text(encoding="utf-8").strip()
+            if token:
+                import base64
+                part = token.split('.')[1]
+                part += '=' * (-len(part) % 4)
+                pl = json.loads(base64.urlsafe_b64decode(part))
+                exp = pl.get("exp", 0)
+                now_sec = int(time.time())
+                if exp - now_sec > 900:  # Còn hạn > 15 phút
+                    return token
+        except Exception:
+            pass
+
+    # 2. Tự động gia hạn qua API baocao-api với token_report
+    report_token_file = BASE_DIR / "token_report.txt"
+    if report_token_file.exists():
+        try:
+            rep_token = report_token_file.read_text(encoding="utf-8").strip()
+            if rep_token:
+                url = "https://baocao-api.ghn.vn/baocao-service/report/dashboard/metabase-token"
+                headers = {
+                    "accept": "application/json",
+                    "content-type": "application/json",
+                    "token": rep_token,
+                    "remote-ip": "not_found",
+                    "user-agent": "Mozilla/5.0"
+                }
+                dash_id = "69fee592e08b65ce62cf5aa9"
+                payload = {"dashboardId": dash_id, "id": dash_id}
+                r = requests.post(url, json=payload, headers=headers, timeout=10)
+                d = r.json()
+                new_jwt = d.get("data", {}).get("token")
+                if new_jwt:
+                    METABASE_JWT_FILE.write_text(new_jwt.strip(), encoding="utf-8")
+                    print("🔄 [AUTO-REFRESH] Tự động gia hạn Metabase JWT thành công (12 tiếng mới)!")
+                    return new_jwt.strip()
+        except Exception as e:
+            print(f"[WARN] Lỗi khi tự động gia hạn Metabase JWT: {e}")
+
     if METABASE_JWT_FILE.exists():
-        t = METABASE_JWT_FILE.read_text(encoding="utf-8").strip()
-        if t:
-            return t
+        return METABASE_JWT_FILE.read_text(encoding="utf-8").strip()
     return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3OTQxNTA3MTcsInBhcmFtcyI6eyJ1c2VyX2lkIjoiMzAwNzQxMyJ9LCJyZXNvdXJjZSI6eyJkYXNoYm9hcmQiOjIyMX19.kyH1qAUikrOYLN0kHyrvZ4r_bVuTpMiaW25ksB1621E"
 
 def fetch_trip_stop_times(code, sso_token):
@@ -80,8 +120,20 @@ def load_cached_trips():
 
 def save_cached_trips(cache):
     try:
+        now_dt = datetime.now(VN_TZ)
+        pruned = {}
+        for code, t in cache.items():
+            eta_str = t.get("expectedArrivalTime")
+            if eta_str:
+                try:
+                    vn_dt = datetime.fromisoformat(eta_str.replace("Z", "+00:00")).astimezone(VN_TZ)
+                    if abs((now_dt - vn_dt).total_seconds()) > 172800:  # > 48 tiếng thì dọn dẹp
+                        continue
+                except Exception:
+                    pass
+            pruned[code] = t
         with open(CACHE_FILE, "w", encoding="utf-8") as f:
-            json.dump(cache, f, ensure_ascii=False, indent=2)
+            json.dump(pruned, f, ensure_ascii=False, indent=2)
     except Exception as e:
         print(f"[WARN] Lỗi khi lưu trips cache: {e}")
 
@@ -189,10 +241,7 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
                 elif rollover_start <= vn_dt <= shift_std_start:
                     tab = t.get("tab", "")
                     arr_time = t.get("arrivalTime") or t.get("departureTime")
-                    if tab == "Sắp đến kho" or not arr_time:
-                        matched = True
-                        note_shift = "Trễ từ Ca Đêm sang"
-                    elif arr_time:
+                    if arr_time:
                         try:
                             arr_vn = datetime.fromisoformat(arr_time.replace("Z", "+00:00")).astimezone(VN_TZ)
                             if arr_vn >= shift_std_start:
@@ -200,16 +249,16 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
                                 note_shift = "Trễ từ Ca Đêm sang"
                         except Exception:
                             pass
+                    elif tab == "Sắp đến kho":
+                        matched = True
+                        note_shift = "Trễ từ Ca Đêm sang"
             else:
                 if shift_std_start < vn_dt <= shift_std_end:
                     matched = True
                 elif rollover_start <= vn_dt <= shift_std_start:
                     tab = t.get("tab", "")
                     arr_time = t.get("arrivalTime") or t.get("departureTime")
-                    if tab == "Sắp đến kho" or not arr_time:
-                        matched = True
-                        note_shift = "Trễ từ Ca Ngày sang"
-                    elif arr_time:
+                    if arr_time:
                         try:
                             arr_vn = datetime.fromisoformat(arr_time.replace("Z", "+00:00")).astimezone(VN_TZ)
                             if arr_vn >= shift_std_start:
@@ -217,6 +266,9 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
                                 note_shift = "Trễ từ Ca Ngày sang"
                         except Exception:
                             pass
+                    elif tab == "Sắp đến kho":
+                        matched = True
+                        note_shift = "Trễ từ Ca Ngày sang"
 
             if matched:
                 code = t.get("partnerTransportationCode")
@@ -345,6 +397,11 @@ def fetch_metabase_orders(packages, jwt_token=None):
         
         try:
             r = requests.get(url, headers=headers, timeout=60)
+            if r.status_code == 401:
+                print("⚠️ [Metabase] Token hết hạn (401), đang tự động làm mới...")
+                jwt_token = get_metabase_jwt(force_refresh=True)
+                url = f"https://data-bi.ghn.vn/api/embed/dashboard/{jwt_token}/dashcard/3090/card/2738?parameters=%7B%22m%25C3%25A3_ki%25E1%25BB%2587n%22%3A{p_val}%7D"
+                r = requests.get(url, headers=headers, timeout=60)
             res = r.json()
             rows = res.get("data", {}).get("rows", [])
             all_rows.extend(rows)

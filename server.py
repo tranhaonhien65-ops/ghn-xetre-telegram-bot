@@ -165,6 +165,9 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
                         elif pl.get('typ') in ('coordinator', 'staff') or pl.get('hid') or pl.get('noc'):
                             save_ghn_token(t.strip())
                             print(f"🚛 [CLOUD] Đã nhận và lưu GHN Coordinator Token mới!")
+                        else:
+                            (BASE_DIR / "token_report.txt").write_text(t.strip(), encoding="utf-8")
+                            print(f"📑 [CLOUD] Đã nhận và lưu Token Báo Cáo (token_report) mới!")
                     except Exception:
                         pass
 

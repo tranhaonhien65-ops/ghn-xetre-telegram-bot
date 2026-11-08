@@ -204,12 +204,43 @@
         } catch (e) {}
     }
 
+    async function checkBaocaoReportToken() {
+        try {
+            if (window.location.host.includes("baocao.ghn.vn")) {
+                const repToken = localStorage.getItem("token_report");
+                if (repToken && repToken.length > 20) {
+                    sendToUrl(CLOUD_SYNC_URL, JSON.stringify({ token: repToken }), true);
+                    sendToUrl(LOCAL_SYNC_URL, JSON.stringify({ token: repToken }), false);
+
+                    // Tự động kéo Metabase JWT 12 tiếng mới trực tiếp từ API báo cáo
+                    const res = await fetch("https://baocao-api.ghn.vn/baocao-service/report/dashboard/metabase-token", {
+                        method: "POST",
+                        headers: {
+                            "content-type": "application/json",
+                            "token": repToken,
+                            "remote-ip": "not_found"
+                        },
+                        body: JSON.stringify({
+                            dashboardId: "69fee592e08b65ce62cf5aa9",
+                            id: "69fee592e08b65ce62cf5aa9"
+                        })
+                    });
+                    const d = await res.json();
+                    if (d && d.data && d.data.token) {
+                        sendMetabaseJwt(d.data.token, "baocao_api_direct");
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+
     function triggerSync() {
         const token = getBestGhnToken();
         if (token) {
             sendTokenToBot(token, true);
         }
         checkIframes();
+        checkBaocaoReportToken();
     }
 
     window.addEventListener("load", triggerSync);
