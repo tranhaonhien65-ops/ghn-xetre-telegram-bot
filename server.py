@@ -8,9 +8,11 @@ import collections
 import urllib.request
 from datetime import datetime, timezone, timedelta
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+from pathlib import Path
 from config import get_ghn_token, save_ghn_token, is_token_valid, load_config, set_bot_token
 from bot import run_bot, BOT_STATUS
 
+BASE_DIR = Path(__file__).parent.resolve()
 PORT = int(os.environ.get("PORT", 8080))
 VN_TZ = timezone(timedelta(hours=7))
 
