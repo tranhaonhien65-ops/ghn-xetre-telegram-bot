@@ -67,6 +67,24 @@ def fetch_trip_stop_times(code, sso_token):
         print(f"[WARN] Lỗi tra cứu chi tiết chuyến {code}: {e}")
         return None, None, ""
 
+CACHE_FILE = BASE_DIR / "daily_trips_cache.json"
+
+def load_cached_trips():
+    if CACHE_FILE.exists():
+        try:
+            with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def save_cached_trips(cache):
+    try:
+        with open(CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(cache, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[WARN] Lỗi khi lưu trips cache: {e}")
+
 def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
     if not sso_token:
         sso_token = get_sso_token()
@@ -119,12 +137,26 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
         except Exception as e:
             print(f"[WARN] Lỗi khi gọi {ep}: {e}")
 
+    # Đồng bộ với bộ nhớ đệm cache chuyến đi trong ngày (tránh mất các xe đã rời kho)
+    cached_trips = load_cached_trips()
+    for t in all_raw_trips:
+        code = t.get("partnerTransportationCode")
+        if code:
+            cached_trips[code] = t
+
+    for code, t in cached_trips.items():
+        if code not in seen_codes:
+            seen_codes.add(code)
+            all_raw_trips.append(t)
+    save_cached_trips(cached_trips)
+
     if shift in ("ca_sang", "ca_ngay"):
         shift_start = datetime(target_date.year, target_date.month, target_date.day, 5, 0, 0, tzinfo=VN_TZ)
         shift_end = datetime(target_date.year, target_date.month, target_date.day, 9, 0, 0, tzinfo=VN_TZ)
     else:
+        # Ca Đêm: Sau 09:00 ngày N (bao gồm xe ca ngày chưa về kịp như E261107KRZN52BF) đến 05:00 sáng ngày N+1
         shift_start = datetime(target_date.year, target_date.month, target_date.day, 7, 0, 0, tzinfo=VN_TZ)
-        shift_end = datetime(target_date.year, target_date.month, target_date.day, 9, 0, 0, tzinfo=VN_TZ) + timedelta(days=1)
+        shift_end = datetime(target_date.year, target_date.month, target_date.day, 5, 0, 0, tzinfo=VN_TZ) + timedelta(days=1)
 
     def get_origin_location(code):
         q_param = json.dumps({"transportationCode": code})
@@ -235,9 +267,12 @@ def extract_packages_for_trips(trips_list, sso_token):
                 if p and str(p).startswith("26"):
                     trip_pkgs.add(str(p).strip())
 
-        all_packages.update(trip_pkgs)
-        trip_to_pkgs[code] = trip_pkgs
-        valid_matched_trips.append((t, eta, len(trip_pkgs)))
+        if len(trip_pkgs) > 0:
+            all_packages.update(trip_pkgs)
+            trip_to_pkgs[code] = trip_pkgs
+            valid_matched_trips.append((t, eta, len(trip_pkgs)))
+        else:
+            print(f"⚠️ Bỏ qua chuyến xe rỗng không có kiện về Bình Định: {code}")
 
     return sorted(list(all_packages)), trip_to_pkgs, valid_matched_trips
 
