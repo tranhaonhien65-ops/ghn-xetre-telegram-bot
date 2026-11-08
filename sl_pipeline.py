@@ -151,12 +151,13 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
     save_cached_trips(cached_trips)
 
     if shift in ("ca_sang", "ca_ngay"):
-        shift_start = datetime(target_date.year, target_date.month, target_date.day, 5, 0, 0, tzinfo=VN_TZ)
-        shift_end = datetime(target_date.year, target_date.month, target_date.day, 9, 0, 0, tzinfo=VN_TZ)
+        shift_std_start = datetime(target_date.year, target_date.month, target_date.day, 5, 0, 0, tzinfo=VN_TZ)
+        shift_std_end = datetime(target_date.year, target_date.month, target_date.day, 9, 0, 0, tzinfo=VN_TZ)
+        rollover_start = shift_std_start - timedelta(hours=12) # Các xe ca đêm hôm trước
     else:
-        # Ca Đêm: Sau 09:00 ngày N (bao gồm xe ca ngày chưa về kịp như E261107KRZN52BF) đến 05:00 sáng ngày N+1
-        shift_start = datetime(target_date.year, target_date.month, target_date.day, 7, 0, 0, tzinfo=VN_TZ)
-        shift_end = datetime(target_date.year, target_date.month, target_date.day, 5, 0, 0, tzinfo=VN_TZ) + timedelta(days=1)
+        shift_std_start = datetime(target_date.year, target_date.month, target_date.day, 9, 0, 0, tzinfo=VN_TZ)
+        shift_std_end = datetime(target_date.year, target_date.month, target_date.day, 5, 0, 0, tzinfo=VN_TZ) + timedelta(days=1)
+        rollover_start = datetime(target_date.year, target_date.month, target_date.day, 5, 0, 0, tzinfo=VN_TZ) # Các xe ca ngày hôm nay
 
     def get_origin_location(code):
         q_param = json.dumps({"transportationCode": code})
@@ -178,7 +179,46 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
         try:
             utc_dt = datetime.fromisoformat(eta_str.replace("Z", "+00:00"))
             vn_dt = utc_dt.astimezone(VN_TZ)
-            if shift_start < vn_dt <= shift_end:
+            
+            matched = False
+            note_shift = ""
+
+            if shift in ("ca_sang", "ca_ngay"):
+                if shift_std_start < vn_dt <= shift_std_end:
+                    matched = True
+                elif rollover_start <= vn_dt <= shift_std_start:
+                    tab = t.get("tab", "")
+                    arr_time = t.get("arrivalTime") or t.get("departureTime")
+                    if tab == "Sắp đến kho" or not arr_time:
+                        matched = True
+                        note_shift = "Trễ từ Ca Đêm sang"
+                    elif arr_time:
+                        try:
+                            arr_vn = datetime.fromisoformat(arr_time.replace("Z", "+00:00")).astimezone(VN_TZ)
+                            if arr_vn >= shift_std_start:
+                                matched = True
+                                note_shift = "Trễ từ Ca Đêm sang"
+                        except Exception:
+                            pass
+            else:
+                if shift_std_start < vn_dt <= shift_std_end:
+                    matched = True
+                elif rollover_start <= vn_dt <= shift_std_start:
+                    tab = t.get("tab", "")
+                    arr_time = t.get("arrivalTime") or t.get("departureTime")
+                    if tab == "Sắp đến kho" or not arr_time:
+                        matched = True
+                        note_shift = "Trễ từ Ca Ngày sang"
+                    elif arr_time:
+                        try:
+                            arr_vn = datetime.fromisoformat(arr_time.replace("Z", "+00:00")).astimezone(VN_TZ)
+                            if arr_vn >= shift_std_start:
+                                matched = True
+                                note_shift = "Trễ từ Ca Ngày sang"
+                        except Exception:
+                            pass
+
+            if matched:
                 code = t.get("partnerTransportationCode")
                 r_name = (t.get("routeScheduleName") or "").strip().upper()
                 
@@ -199,6 +239,7 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
                             t["routeScheduleName"] = "KTC_TRỤC_NGOÀI"
 
                 if is_linehaul:
+                    t["note_shift"] = note_shift
                     matched_trips.append((t, vn_dt))
         except Exception:
             continue
@@ -379,7 +420,8 @@ def run_pipeline(shift="ca_dem", target_date=None):
             "eta": eta_str,
             "etd": etd_str,
             "pkgs": len(pkgs),
-            "orders": orders_cnt
+            "orders": orders_cnt,
+            "note_shift": t.get("note_shift", "")
         })
 
     # 1. Render ảnh tổng quan trước
@@ -451,7 +493,8 @@ def send_telegram_photo_and_trucks(shift_label, target_date, total_orders, bd_to
                 total_truck_pkgs += pkgs
                 total_truck_orders += orders
 
-                lines.append(f"<b>{idx}. <code>{code}</code></b> ({route}) | <b>{plate}</b>")
+                note_label = f" ⚠️ <b>({tr['note_shift']})</b>" if tr.get('note_shift') else ""
+                lines.append(f"<b>{idx}. <code>{code}</code></b> ({route}) | <b>{plate}</b>{note_label}")
                 lines.append(f"   ⏱️ Dự kiến: Tới <b>{eta}</b> | Rời: <b>{etd}</b>")
                 lines.append(f"   📦 Chở về: <b>{pkgs:,} kiện</b> | <b>{orders:,} đơn</b>\n")
 
