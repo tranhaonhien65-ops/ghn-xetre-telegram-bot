@@ -21,7 +21,19 @@ def get_bc_val(bc_counts, bc_name):
     for k, v in bc_counts.items():
         if k.strip().lower() == clean_target:
             return v
+    # Check partial match for Tây Sơn 44
+    if "44" in bc_name and "tây sơn" in clean_target:
+        for k, v in bc_counts.items():
+            if "44" in k and "tây sơn" in k.lower():
+                return v
     return 0
+
+def match_route(route_name, grp_name):
+    if not route_name or not grp_name:
+        return False
+    r1 = route_name.replace("_", " ").replace("Đ", "D").replace("đ", "d").strip().upper()
+    g1 = grp_name.replace("_", " ").replace("Đ", "D").replace("đ", "d").strip().upper()
+    return r1 == g1
 
 def generate_report_file(orders_data, route_summary, bc_counts, out_file=None):
     if out_file is None:
@@ -142,12 +154,10 @@ def generate_report_file(orders_data, route_summary, bc_counts, out_file=None):
     t2_r = 3
     for grp_name, bc_list in bd_groups:
         grp_sum = sum(get_bc_val(bc_counts, bc) for bc in bc_list)
-        rt_match = next((x for x in route_summary if x["tuyen"].replace("_"," ") == grp_name.replace("_"," ") or x["tuyen"] == grp_name), None)
+        rt_match = next((x for x in route_summary if match_route(x["tuyen"], grp_name)), None)
         if grp_name == "BD 12":
             grp_sum = sum(get_bc_val(bc_counts, bc) for bc in bc_list)
-        elif grp_name == "BD 01" and rt_match:
-            grp_sum = rt_match["so_don"]
-        elif rt_match:
+        elif rt_match and rt_match["so_don"] > 0:
             grp_sum = rt_match["so_don"]
         total_bd += grp_sum
 
@@ -218,8 +228,8 @@ def generate_report_file(orders_data, route_summary, bc_counts, out_file=None):
     t3_r = 3
     for grp_name, bc_list in py_groups:
         grp_sum = sum(get_bc_val(bc_counts, bc) for bc in bc_list)
-        rt_match = next((x for x in route_summary if x["tuyen"].replace("_"," ") == grp_name.replace("_"," ") or x["tuyen"] == grp_name), None)
-        if rt_match:
+        rt_match = next((x for x in route_summary if match_route(x["tuyen"], grp_name)), None)
+        if rt_match and rt_match["so_don"] > 0:
             grp_sum = rt_match["so_don"]
         total_py += grp_sum
 

@@ -22,7 +22,19 @@ def get_bc_val(bc_counts, bc_name):
     for k, v in bc_counts.items():
         if k.strip().lower() == clean_target:
             return v
+    # Check partial match for Tây Sơn 44
+    if "44" in bc_name and "tây sơn" in clean_target:
+        for k, v in bc_counts.items():
+            if "44" in k and "tây sơn" in k.lower():
+                return v
     return 0
+
+def match_route(route_name, grp_name):
+    if not route_name or not grp_name:
+        return False
+    r1 = route_name.replace("_", " ").replace("Đ", "D").replace("đ", "d").strip().upper()
+    g1 = grp_name.replace("_", " ").replace("Đ", "D").replace("đ", "d").strip().upper()
+    return r1 == g1
 
 def render_overview_image(route_summary, bc_counts, out_path=None):
     if out_path is None:
@@ -43,7 +55,7 @@ def render_overview_image(route_summary, bc_counts, out_path=None):
 
     # Canvas dimensions
     width = 1720
-    height = 680
+    height = 840
     img = Image.new("RGB", (width, height), color="#ffffff")
     draw = ImageDraw.Draw(img)
 
@@ -192,12 +204,10 @@ def render_overview_image(route_summary, bc_counts, out_path=None):
     bd_total = 0
     for grp_name, bc_list in bd_groups:
         grp_sum = sum(get_bc_val(bc_counts, bc) for bc in bc_list)
-        rt_match = next((x for x in route_summary if x["tuyen"].replace("_"," ") == grp_name.replace("_"," ") or x["tuyen"] == grp_name), None)
+        rt_match = next((x for x in route_summary if match_route(x["tuyen"], grp_name)), None)
         if grp_name == "BD 12":
             grp_sum = sum(get_bc_val(bc_counts, bc) for bc in bc_list)
-        elif grp_name == "BD 01" and rt_match:
-            grp_sum = rt_match["so_don"]
-        elif rt_match:
+        elif rt_match and rt_match["so_don"] > 0:
             grp_sum = rt_match["so_don"]
 
         bd_total += grp_sum
@@ -294,8 +304,8 @@ def render_overview_image(route_summary, bc_counts, out_path=None):
     py_total = 0
     for grp_name, bc_list in py_groups:
         grp_sum = sum(get_bc_val(bc_counts, bc) for bc in bc_list)
-        rt_match = next((x for x in route_summary if x["tuyen"].replace("_"," ") == grp_name.replace("_"," ") or x["tuyen"] == grp_name), None)
-        if rt_match:
+        rt_match = next((x for x in route_summary if match_route(x["tuyen"], grp_name)), None)
+        if rt_match and rt_match["so_don"] > 0:
             grp_sum = rt_match["so_don"]
 
         py_total += grp_sum
