@@ -347,29 +347,40 @@ def run_pipeline(shift="ca_dem", target_date=None):
             "orders": orders_cnt
         })
 
-    # Xuất file Excel
-    out_excel = BASE_DIR / "SL_BD_ca1.xlsx"
-    total_table_1, total_bd, total_py = generate_report_file(processed_orders, summary_routes, bc_orders, out_file=out_excel)
-
-    # Render ảnh
+    # 1. Render ảnh tổng quan trước
     out_img = BASE_DIR / "SL_BD_ca1_overview.png"
     render_overview_image(summary_routes, bc_orders, out_path=out_img)
 
-    # Gửi Telegram
-    send_telegram_production_report(
+    total_table_1 = sum(s['so_don'] for s in summary_routes if s['tuyen'] != "GHN HOÀI NHƠN" or s['so_don'] > 0)
+    bd_total = sum(s['so_don'] for s in summary_routes if any(k in s['tuyen'] for k in ['BĐ 0', 'BĐ 1', 'BD 1', 'DN', 'GL']))
+    py_total = total_table_1 - bd_total
+
+    # Gửi ảnh và danh sách xe trục lên Telegram NGAY LẬP TỨC
+    print("📤 Đang gửi ảnh tổng quan và danh sách xe trục lên Telegram...")
+    send_telegram_photo_and_trucks(
         shift_label=shift_label,
         target_date=dt,
         total_orders=total_table_1,
-        bd_total=total_bd,
-        py_total=total_py,
-        summary_routes=summary_routes,
-        bc_orders=bc_orders,
+        bd_total=bd_total,
+        py_total=py_total,
         truck_data=truck_data,
-        excel_file_path=str(out_excel),
         img_path=str(out_img)
     )
 
-def send_telegram_production_report(shift_label, target_date, total_orders, bd_total, py_total, summary_routes, bc_orders, truck_data, excel_file_path, img_path):
+    # 2. Xuất file Excel nhẹ và gửi tiếp file Excel
+    out_excel = BASE_DIR / "SL_BD_ca1.xlsx"
+    generate_report_file(processed_orders, summary_routes, bc_orders, out_file=out_excel)
+
+    if out_excel.exists():
+        try:
+            url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendDocument"
+            with open(out_excel, "rb") as f:
+                requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "caption": f"📁 File chi tiết sản lượng: SL BD ca1.xlsx ({total_table_1:,} đơn)"}, files={"document": f}, timeout=40)
+                print("  ✓ Đã gửi file Excel lên Telegram.")
+        except Exception as e:
+            print(f"  ✗ Lỗi gửi file Excel Telegram: {e}")
+
+def send_telegram_photo_and_trucks(shift_label, target_date, total_orders, bd_total, py_total, truck_data, img_path):
     bot_token = TELEGRAM_BOT_TOKEN
     chat_id = TELEGRAM_CHAT_ID
     date_str = target_date.strftime("%d/%m/%Y")
@@ -385,17 +396,7 @@ def send_telegram_production_report(shift_label, target_date, total_orders, bd_t
         except Exception as e:
             print(f"  ✗ Lỗi gửi ảnh Telegram: {e}")
 
-    # 2. GỬI FILE EXCEL
-    if Path(excel_file_path).exists():
-        try:
-            url = f"https://api.telegram.org/bot{bot_token}/sendDocument"
-            with open(excel_file_path, "rb") as f:
-                r = requests.post(url, data={"chat_id": chat_id, "caption": f"📁 File chi tiết sản lượng: SL BD ca1.xlsx ({total_orders:,} đơn)"}, files={"document": f}, timeout=40)
-                print("  ✓ Đã gửi file Excel lên Telegram.")
-        except Exception as e:
-            print(f"  ✗ Lỗi gửi file Excel: {e}")
-
-    # 3. GỬI DANH SÁCH XE TRỤC
+    # 2. GỬI DANH SÁCH XE TRỤC
     if truck_data:
         try:
             lines = [

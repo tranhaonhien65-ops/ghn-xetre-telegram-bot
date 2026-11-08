@@ -2,96 +2,296 @@ import sys
 import os
 from pathlib import Path
 import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 BASE_DIR = Path(__file__).resolve().parent
-TEMPLATE_PATH = BASE_DIR / "SL_BD_ca1_template.xlsx"
+
+def get_bc_val(bc_counts, bc_name):
+    if not bc_name:
+        return 0
+    if bc_name in bc_counts:
+        return bc_counts[bc_name]
+    v1 = bc_name.replace(" - ", "-")
+    if v1 in bc_counts:
+        return bc_counts[v1]
+    v2 = bc_name.replace("-", " - ")
+    if v2 in bc_counts:
+        return bc_counts[v2]
+    clean_target = bc_name.strip().lower()
+    for k, v in bc_counts.items():
+        if k.strip().lower() == clean_target:
+            return v
+    return 0
 
 def generate_report_file(orders_data, route_summary, bc_counts, out_file=None):
     if out_file is None:
         out_file = BASE_DIR / "SL_BD_ca1.xlsx"
     out_file = Path(out_file)
 
-    wb = openpyxl.load_workbook(str(TEMPLATE_PATH))
-    ws_data = wb['NHẬP DATA']
-    ws_summary = wb['TỔNG QUAN']
+    wb = openpyxl.Workbook()
 
-    # 1. Fill NHẬP DATA
-    for idx, ord_item in enumerate(orders_data, start=2):
-        ws_data.cell(row=idx, column=1, value=ord_item.get('package'))
-        ws_data.cell(row=idx, column=2, value=ord_item.get('tg'))
-        ws_data.cell(row=idx, column=3, value=ord_item.get('order'))
-        ws_data.cell(row=idx, column=4, value=ord_item.get('kho_gui'))
-        ws_data.cell(row=idx, column=5, value=ord_item.get('kho_nhan'))
-        ws_data.cell(row=idx, column=6, value=ord_item.get('kho_ht'))
-        ws_data.cell(row=idx, column=7, value=ord_item.get('kho_giao_id'))
-        ws_data.cell(row=idx, column=8, value=ord_item.get('status'))
-        ws_data.cell(row=idx, column=12, value=ord_item.get('ten_kho_giao'))
-        ws_data.cell(row=idx, column=13, value=ord_item.get('tuyen'))
+    # Define styles
+    font_header = Font(name="Arial", size=11, bold=True, color="FFFFFF")
+    font_bold = Font(name="Arial", size=11, bold=True, color="000000")
+    font_body = Font(name="Arial", size=10, color="000000")
+    font_rot = Font(name="Arial", size=11, bold=True, color="C00000")
+    font_khong_rot = Font(name="Arial", size=11, bold=True, color="C00000") # or 833C0C
+    font_grp = Font(name="Arial", size=11, bold=True, color="385723")
 
-    # 2. Update TỔNG QUAN
-    route_row_map = {}
-    for r in range(3, 23):
-        rt_name = ws_summary.cell(row=r, column=1).value
-        if rt_name:
-            clean_name = str(rt_name).strip()
-            route_row_map[clean_name] = r
+    fill_t1_head = PatternFill(start_color="385723", end_color="385723", fill_type="solid")
+    fill_note_head = PatternFill(start_color="833C0C", end_color="833C0C", fill_type="solid")
+    fill_t2_head = PatternFill(start_color="833C0C", end_color="833C0C", fill_type="solid")
+    fill_grp = PatternFill(start_color="C5E0B4", end_color="C5E0B4", fill_type="solid")
 
+    thin_border = Border(
+        left=Side(style='thin', color='BFBFBF'),
+        right=Side(style='thin', color='BFBFBF'),
+        top=Side(style='thin', color='BFBFBF'),
+        bottom=Side(style='thin', color='BFBFBF')
+    )
+
+    # 1. SHEET: TỔNG QUAN
+    ws_sum = wb.active
+    ws_sum.title = 'TỔNG QUAN'
+
+    # Table 1 Header (A2:E2)
+    t1_headers = [
+        ('A', 'Tuyến Xe', fill_t1_head),
+        ('B', 'SỐ ĐƠN', fill_t1_head),
+        ('C', 'Tỉ Lệ Thùng Xe', fill_t1_head),
+        ('D', 'Note', fill_note_head),
+        ('E', 'TẢI TRỌNG', fill_t1_head)
+    ]
+    for col, text, fill in t1_headers:
+        c = ws_sum[f'{col}2']
+        c.value = text
+        c.font = font_header
+        c.fill = fill
+        c.alignment = Alignment(horizontal='center', vertical='center')
+        c.border = thin_border
+
+    # Table 1 Data Rows
+    total_table_1 = 0
+    cur_r = 3
     for item in route_summary:
-        rt = item['tuyen']
-        r_idx = route_row_map.get(rt)
-        if r_idx:
-            ws_summary.cell(row=r_idx, column=2, value=item['so_don'])
+        tuyen = item['tuyen']
+        so_don = item['so_don']
+        if tuyen == "GHN HOÀI NHƠN" and so_don == 0:
+            continue
+        total_table_1 += so_don
+        pct = item.get('pct', 0.0)
+        pct_str = f"{pct:.0f}%" if pct > 0 else "0%"
+        note = item.get('note', 'Không Rớt')
+        tai_trong = item.get('tai_trong', '')
+        if tai_trong == 'N/A':
+            tai_trong = ''
 
-    total_table_1 = sum(item['so_don'] for item in route_summary)
-    for r in range(3, 25):
-        a_val = ws_summary.cell(row=r, column=1).value
-        if a_val and 'grand' in str(a_val).lower():
-            ws_summary.cell(row=r, column=2, value=total_table_1)
-            break
-    else:
-        ws_summary.cell(row=22, column=2, value=total_table_1)
+        vals = [
+            ('A', tuyen, font_bold, Alignment(horizontal='center')),
+            ('B', so_don, font_body, Alignment(horizontal='right')),
+            ('C', pct_str, font_body, Alignment(horizontal='center')),
+            ('D', note, font_rot if note == 'Rớt' else font_khong_rot, Alignment(horizontal='center')),
+            ('E', tai_trong, font_body, Alignment(horizontal='center'))
+        ]
+        for col, val, fnt, aln in vals:
+            c = ws_sum[f'{col}{cur_r}']
+            c.value = val
+            c.font = fnt
+            c.alignment = aln
+            c.border = thin_border
+        cur_r += 1
 
-    # Middle table (Bình Định): Column G is BC name / Route, Column H is SỐ ĐƠN
+    # Table 1 Grand Total
+    ws_sum[f'A{cur_r}'] = 'Grand Total'
+    ws_sum[f'A{cur_r}'].font = font_bold
+    ws_sum[f'A{cur_r}'].border = thin_border
+    ws_sum[f'B{cur_r}'] = total_table_1
+    ws_sum[f'B{cur_r}'].font = font_bold
+    ws_sum[f'B{cur_r}'].border = thin_border
+
+    # Table 2: BÌNH ĐỊNH (G2:H2)
+    c_g = ws_sum['G2']
+    c_g.value = 'TÊN TUYẾN XE'
+    c_g.font = font_header
+    c_g.fill = fill_t2_head
+    c_g.alignment = Alignment(horizontal='center')
+    c_g.border = thin_border
+
+    c_h = ws_sum['H2']
+    c_h.value = 'SỐ ĐƠN'
+    c_h.font = font_header
+    c_h.fill = fill_t2_head
+    c_h.alignment = Alignment(horizontal='center')
+    c_h.border = thin_border
+
+    bd_groups = [
+        ("BD 13", ["Bưu Cục Vận Hành Thôn Định Trị-Xã Vĩnh Thạnh-Bình Định", "Bưu Cục 61 Quang Trung-Xã Vân Canh-Bình Định"]),
+        ("BD 01", ["Bưu Cục Thôn Xuân Phong Nam-An Lão-Bình Định", "(BDI) Hoài Nhơn Nam 1"]),
+        ("BD 03", ["Bưu Cục 269 Tây Sơn-Quy Nhơn-Bình Định", "Bưu Cục 396 Âu Cơ-Bùi Thị Xuân-Quy Nhơn-Bình Định", "Bưu Cục 263 Đống Đa-Quy Nhơn-Bình Định"]),
+        ("BD 04", ["Bưu Cục Đường 3 Tháng 2-Xã Phù Cát-Bình Định"]),
+        ("BD 05", ["Bưu Cục 21 Tây Sơn-Xã Phù Mỹ-Bình Định", "Bưu Cục 107 Nguyễn Lữ-Phù Mỹ-Bình Định"]),
+        ("BD 08", ["Bưu Cục 767 Hùng Vương-Quy Nhơn-Bình Định", "Bưu Cục Khu Vực Kim Châu-An Nhơn-Bình Định"]),
+        ("BD 12", ["Kho Giao Hàng Nặng Hoài Nhơn-Bình Định", "Bưu Cục Số 35 Phạm Văn Đồng-Tăng Bạt Hổ-Hoài Ân-Bình Định"]),
+        ("BD 14", ["Bưu Cục Thôn Chánh Hóa-Xã Cát Tiến-Bình Định", "(BDI) Tuy Phước Đông"]),
+        ("DN_BD_KH", ["Bưu Cục 571 Trần Phú-Tuy Phước-Bình Định"]),
+        ("DN-QNG-BD", ["Bưu Cục 838 Quang Trung-Phường Hoài Nhơn Tây-Bình Định"]),
+        ("GL_BD_01", ["Bưu Cục 44 Quang Trung-Tây Sơn-Bình Định"])
+    ]
+
     total_bd = 0
-    for r in range(3, ws_summary.max_row + 1):
-        g_val = ws_summary.cell(row=r, column=7).value
-        if g_val:
-            g_str = str(g_val).strip()
-            if 'grand' in g_str.lower():
-                continue
-            if g_str in route_row_map:
-                val = next((x['so_don'] for x in route_summary if x['tuyen'] == g_str), 0)
-                ws_summary.cell(row=r, column=8, value=val)
-            elif g_str in bc_counts:
-                val = bc_counts[g_str]
-                ws_summary.cell(row=r, column=8, value=val)
-                total_bd += val
+    t2_r = 3
+    for grp_name, bc_list in bd_groups:
+        grp_sum = sum(get_bc_val(bc_counts, bc) for bc in bc_list)
+        rt_match = next((x for x in route_summary if x["tuyen"].replace("_"," ") == grp_name.replace("_"," ") or x["tuyen"] == grp_name), None)
+        if grp_name == "BD 12":
+            grp_sum = sum(get_bc_val(bc_counts, bc) for bc in bc_list)
+        elif grp_name == "BD 01" and rt_match:
+            grp_sum = rt_match["so_don"]
+        elif rt_match:
+            grp_sum = rt_match["so_don"]
+        total_bd += grp_sum
 
-    for r in range(3, ws_summary.max_row + 1):
-        g_val = ws_summary.cell(row=r, column=7).value
-        if g_val and 'grand' in str(g_val).lower():
-            ws_summary.cell(row=r, column=8, value=total_bd)
+        # Grp row
+        c_g = ws_sum[f'G{t2_r}']
+        c_g.value = f"= {grp_name}"
+        c_g.font = font_grp
+        c_g.fill = fill_grp
+        c_g.alignment = Alignment(horizontal='center')
+        c_g.border = thin_border
 
-    # Right table (Phú Yên): Column J is BC name / Route, Column K is SỐ ĐƠN
+        c_h = ws_sum[f'H{t2_r}']
+        c_h.value = grp_sum
+        c_h.font = font_grp
+        c_h.fill = fill_grp
+        c_h.alignment = Alignment(horizontal='right')
+        c_h.border = thin_border
+        t2_r += 1
+
+        for bc in bc_list:
+            b_val = get_bc_val(bc_counts, bc)
+            c_g = ws_sum[f'G{t2_r}']
+            c_g.value = bc
+            c_g.font = font_body
+            c_g.alignment = Alignment(horizontal='center')
+            c_g.border = thin_border
+
+            c_h = ws_sum[f'H{t2_r}']
+            c_h.value = b_val
+            c_h.font = font_body
+            c_h.alignment = Alignment(horizontal='right')
+            c_h.border = thin_border
+            t2_r += 1
+
+    ws_sum[f'G{t2_r}'] = 'Grand Total'
+    ws_sum[f'G{t2_r}'].font = font_bold
+    ws_sum[f'G{t2_r}'].border = thin_border
+    ws_sum[f'H{t2_r}'] = total_bd
+    ws_sum[f'H{t2_r}'].font = font_bold
+    ws_sum[f'H{t2_r}'].border = thin_border
+
+    # Table 3: PHÚ YÊN (J2:K2)
+    c_j = ws_sum['J2']
+    c_j.value = 'TÊN TUYẾN XE'
+    c_j.font = font_header
+    c_j.fill = fill_t2_head
+    c_j.alignment = Alignment(horizontal='center')
+    c_j.border = thin_border
+
+    c_k = ws_sum['K2']
+    c_k.value = 'SỐ ĐƠN'
+    c_k.font = font_header
+    c_k.fill = fill_t2_head
+    c_k.alignment = Alignment(horizontal='center')
+    c_k.border = thin_border
+
+    py_groups = [
+        ("BD PY 01", ["Bưu Cục KP4 Hòa Vinh- Đông Hòa- Phú yên", "Bưu Cục Thị Trấn Phú Thứ-Tây Hoà-Phú Yên"]),
+        ("BD PY 02", ["Bưu Cục 274 Hùng Vương-Tuy Hòa-Phú Yên", "Kho Giao Hàng Nặng Phú Yên"]),
+        ("BD PY 03", ["Bưu cục 138 Trần Phú-Đồng Xuân-Phú Yên", "BƯU CỤC KHU PHỐ 3 - THỊ TRẤN HAI RIÊNG-SÔNG HÌNH-PHÚ YÊN", "Bưu Cục Suối Bạc-Sơn Hòa-Phú Yên"]),
+        ("BD PY 06", ["Bưu cục DT644-Sông Cầu-Phú Yên", "Bưu cục 27 Nguyễn Tất Thành-Tuy Hòa-Phú Yên"]),
+        ("BD PY 06_01", ["Bưu Cục Thôn Đông Phước-Phú Hòa-Phú Yên"]),
+        ("BD PY 08", ["Bưu Cục 71 Quốc Lộ 1A-Xã Tuy An Bắc-Phú Yên", "Bưu Cục Đường Tỉnh 643-Xã Tuy An Nam-Phú Yên"]),
+        ("GHN BÌNH ĐỊNH", ["Kho Giao Hàng Nặng Bình Định"])
+    ]
+
     total_py = 0
-    for r in range(3, ws_summary.max_row + 1):
-        j_val = ws_summary.cell(row=r, column=10).value
-        if j_val:
-            j_str = str(j_val).strip()
-            if 'grand' in j_str.lower():
-                continue
-            if j_str in route_row_map:
-                val = next((x['so_don'] for x in route_summary if x['tuyen'] == j_str), 0)
-                ws_summary.cell(row=r, column=11, value=val)
-            elif j_str in bc_counts:
-                val = bc_counts[j_str]
-                ws_summary.cell(row=r, column=11, value=val)
-                total_py += val
+    t3_r = 3
+    for grp_name, bc_list in py_groups:
+        grp_sum = sum(get_bc_val(bc_counts, bc) for bc in bc_list)
+        rt_match = next((x for x in route_summary if x["tuyen"].replace("_"," ") == grp_name.replace("_"," ") or x["tuyen"] == grp_name), None)
+        if rt_match:
+            grp_sum = rt_match["so_don"]
+        total_py += grp_sum
 
-    for r in range(3, ws_summary.max_row + 1):
-        j_val = ws_summary.cell(row=r, column=10).value
-        if j_val and 'grand' in str(j_val).lower():
-            ws_summary.cell(row=r, column=11, value=total_py)
+        c_j = ws_sum[f'J{t3_r}']
+        c_j.value = f"= {grp_name}"
+        c_j.font = font_grp
+        c_j.fill = fill_grp
+        c_j.alignment = Alignment(horizontal='center')
+        c_j.border = thin_border
+
+        c_k = ws_sum[f'K{t3_r}']
+        c_k.value = grp_sum
+        c_k.font = font_grp
+        c_k.fill = fill_grp
+        c_k.alignment = Alignment(horizontal='right')
+        c_k.border = thin_border
+        t3_r += 1
+
+        for bc in bc_list:
+            b_val = get_bc_val(bc_counts, bc)
+            c_j = ws_sum[f'J{t3_r}']
+            c_j.value = bc
+            c_j.font = font_body
+            c_j.alignment = Alignment(horizontal='center')
+            c_j.border = thin_border
+
+            c_k = ws_sum[f'K{t3_r}']
+            c_k.value = b_val
+            c_k.font = font_body
+            c_k.alignment = Alignment(horizontal='right')
+            c_k.border = thin_border
+            t3_r += 1
+
+    ws_sum[f'J{t3_r}'] = 'Grand Total'
+    ws_sum[f'J{t3_r}'].font = font_bold
+    ws_sum[f'J{t3_r}'].border = thin_border
+    ws_sum[f'K{t3_r}'] = total_py
+    ws_sum[f'K{t3_r}'].font = font_bold
+    ws_sum[f'K{t3_r}'].border = thin_border
+
+    # Adjust Column Widths
+    ws_sum.column_dimensions['A'].width = 16
+    ws_sum.column_dimensions['B'].width = 12
+    ws_sum.column_dimensions['C'].width = 15
+    ws_sum.column_dimensions['D'].width = 14
+    ws_sum.column_dimensions['E'].width = 13
+    ws_sum.column_dimensions['F'].width = 4
+    ws_sum.column_dimensions['G'].width = 50
+    ws_sum.column_dimensions['H'].width = 12
+    ws_sum.column_dimensions['I'].width = 4
+    ws_sum.column_dimensions['J'].width = 50
+    ws_sum.column_dimensions['K'].width = 12
+
+    # 2. SHEET: NHẬP DATA
+    ws_data = wb.create_sheet('NHẬP DATA')
+    headers_data = ['Mã kiện', 'TG đóng kiện', 'Mã đơn', 'Kho gửi', 'Kho nhận', 'Kho hiện tại', 'Kho giao', 'Trạng thái hiện tại', 'Tên Kho Gửi', 'Tên kho Nhận', 'Tên Kho Hiện Tại', 'Tên Kho Giao', 'Tuyến Xe']
+    ws_data.append(headers_data)
+
+    for ord_item in orders_data:
+        ws_data.append([
+            ord_item.get('package', ''),
+            ord_item.get('tg', ''),
+            ord_item.get('order', ''),
+            ord_item.get('kho_gui', ''),
+            ord_item.get('kho_nhan', ''),
+            ord_item.get('kho_ht', ''),
+            ord_item.get('kho_giao_id', ''),
+            ord_item.get('status', ''),
+            '', '', '',
+            ord_item.get('ten_kho_giao', ''),
+            ord_item.get('tuyen', '')
+        ])
 
     wb.save(str(out_file))
     print(f"✅ Generated {out_file} successfully! Total orders: {len(orders_data)} (Table 1: {total_table_1}, BD: {total_bd}, PY: {total_py})")
