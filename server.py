@@ -150,6 +150,7 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
                     (BASE_DIR / "metabase_jwt.txt").write_text(jwt.strip(), encoding="utf-8")
                     print(f"📊 [CLOUD] Đã nhận và lưu Metabase JWT mới!")
                 
+                matched_category = False
                 tokens = re.findall(r'eyJhbGciOi[a-zA-Z0-9_\-\.]+', raw_token)
                 for t in tokens:
                     try:
@@ -158,23 +159,30 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
                         pl = json.loads(base64.urlsafe_b64decode(part))
                         if 'resource' in pl and 'dashboard' in pl.get('resource', {}):
                             (BASE_DIR / "metabase_jwt.txt").write_text(t.strip(), encoding="utf-8")
-                            print(f"📊 [CLOUD] Đã nhận và lưu Metabase JWT mới!")
+                            exp_val = pl.get('exp')
+                            exp_str = datetime.fromtimestamp(exp_val, VN_TZ).strftime('%H:%M:%S %d/%m/%Y') if exp_val else 'Vĩnh viễn'
+                            print(f"📊 [CLOUD] Đã nhận và lưu Metabase JWT mới! (Hạn dùng: {exp_str})")
+                            matched_category = True
                         elif 'ssoId' in pl or 'orgCode' in pl:
                             (BASE_DIR / "ghn_sso_token.txt").write_text(t.strip(), encoding="utf-8")
                             print(f"🔑 [CLOUD] Đã nhận và lưu GHN SSO Token mới!")
+                            matched_category = True
                         elif pl.get('typ') in ('coordinator', 'staff') or pl.get('hid') or pl.get('noc'):
                             save_ghn_token(t.strip())
                             print(f"🚛 [CLOUD] Đã nhận và lưu GHN Coordinator Token mới!")
+                            matched_category = True
                         else:
                             (BASE_DIR / "token_report.txt").write_text(t.strip(), encoding="utf-8")
                             print(f"📑 [CLOUD] Đã nhận và lưu Token Báo Cáo (token_report) mới!")
-                    except Exception:
-                        pass
+                            matched_category = True
+                    except Exception as e:
+                        print(f"[WARN] Lỗi giải mã token: {e}")
 
-                if raw_token.lower().startswith("bearer "):
-                    raw_token = raw_token[7:].strip()
-                if raw_token and len(raw_token) > 20:
-                    save_ghn_token(raw_token)
+                if not matched_category:
+                    if raw_token.lower().startswith("bearer "):
+                        raw_token = raw_token[7:].strip()
+                    if raw_token and len(raw_token) > 20:
+                        save_ghn_token(raw_token)
 
                 self.send_response(200)
                 self._send_cors()
