@@ -215,7 +215,7 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
             all_raw_trips.append(t)
     save_cached_trips(cached_trips)
 
-    if shift in ("ca_sang", "ca_ngay"):
+    if shift in ("ca_sang", "ca_ngay", "ca2", "ca_2", "ca 2"):
         shift_std_start = datetime(target_date.year, target_date.month, target_date.day, 5, 0, 0, tzinfo=VN_TZ)
         shift_std_end = datetime(target_date.year, target_date.month, target_date.day, 9, 0, 0, tzinfo=VN_TZ)
         rollover_start = shift_std_start - timedelta(hours=12) # Các xe ca đêm hôm trước
@@ -248,7 +248,7 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
             matched = False
             note_shift = ""
 
-            if shift in ("ca_sang", "ca_ngay"):
+            if shift in ("ca_sang", "ca_ngay", "ca2", "ca_2", "ca 2"):
                 if shift_std_start < vn_dt <= shift_std_end:
                     matched = True
                 elif rollover_start <= vn_dt <= shift_std_start:
@@ -425,7 +425,7 @@ def fetch_metabase_orders(packages, jwt_token=None):
 
     return all_rows
 
-def run_pipeline(shift="ca_dem", target_date=None):
+def run_pipeline(shift="ca1", target_date=None):
     sso_token = get_sso_token()
     if not sso_token:
         print("[ERROR] SSO token is missing!")
@@ -436,7 +436,9 @@ def run_pipeline(shift="ca_dem", target_date=None):
     else:
         dt = target_date
 
-    shift_label = "Ca Đêm" if shift == "ca_dem" else "Ca Sáng"
+    is_ca2 = str(shift).lower() in ("ca2", "ca_2", "ca_sang", "ca_ngay", "ca 2")
+    shift_code = "ca2" if is_ca2 else "ca1"
+    shift_label = "Ca 2 (Ca Ngày)" if is_ca2 else "Ca 1 (Ca Đêm)"
     date_str = dt.strftime("%d/%m/%Y")
     print(f"\n=================================================================")
     print(f"🚀 TỰ ĐỘNG TẠO BÁO CÁO SL BD ({shift_label} - Ngày {date_str})")
@@ -455,8 +457,8 @@ def run_pipeline(shift="ca_dem", target_date=None):
     orders_rows = fetch_metabase_orders(packages)
     print(f"✅ Lấy thành công: {len(orders_rows)} đơn hàng từ Metabase.")
 
-    ma_to_ten, ten_to_tuyen = load_dictionaries()
-    processed_orders, summary_routes, bc_orders = process_orders(orders_rows, ma_to_ten, ten_to_tuyen)
+    ma_to_ten, ten_to_tuyen = load_dictionaries(shift=shift_code)
+    processed_orders, summary_routes, bc_orders = process_orders(orders_rows, ma_to_ten, ten_to_tuyen, shift=shift_code)
 
     valid_route_names = set(s['tuyen'] for s in summary_routes)
     pkg_to_valid_orders_cnt = {}
@@ -495,12 +497,16 @@ def run_pipeline(shift="ca_dem", target_date=None):
         })
 
     # 1. Render ảnh tổng quan trước
-    out_img = BASE_DIR / "SL_BD_ca1_overview.png"
-    render_overview_image(summary_routes, bc_orders, out_path=out_img)
+    out_img = BASE_DIR / f"SL_BD_{shift_code}_overview.png"
+    render_overview_image(summary_routes, bc_orders, shift=shift_code, out_path=out_img)
 
     total_table_1 = sum(s['so_don'] for s in summary_routes if s['tuyen'] != "GHN HOÀI NHƠN" or s['so_don'] > 0)
-    bd_total = sum(s['so_don'] for s in summary_routes if any(k in s['tuyen'] for k in ['BĐ 0', 'BĐ 1', 'BD 1', 'DN', 'GL']))
-    py_total = total_table_1 - bd_total
+    if is_ca2:
+        bd_total = sum(s['so_don'] for s in summary_routes if s['tuyen'] in ['BĐ 02', 'BĐ 06', 'BĐ 12', 'GL 05'])
+        py_total = total_table_1 - bd_total
+    else:
+        bd_total = sum(s['so_don'] for s in summary_routes if any(k in s['tuyen'] for k in ['BĐ 0', 'BĐ 1', 'BD 1', 'DN', 'GL']))
+        py_total = total_table_1 - bd_total
 
     # Gửi ảnh và danh sách xe trục lên Telegram NGAY LẬP TỨC
     print("📤 Đang gửi ảnh tổng quan và danh sách xe trục lên Telegram...")
@@ -515,14 +521,15 @@ def run_pipeline(shift="ca_dem", target_date=None):
     )
 
     # 2. Xuất file Excel nhẹ và gửi tiếp file Excel
-    out_excel = BASE_DIR / "SL_BD_ca1.xlsx"
-    generate_report_file(processed_orders, summary_routes, bc_orders, out_file=out_excel)
+    out_excel = BASE_DIR / f"SL_BD_{shift_code}.xlsx"
+    generate_report_file(processed_orders, summary_routes, bc_orders, shift=shift_code, out_file=out_excel)
 
     if out_excel.exists():
         try:
             url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendDocument"
             with open(out_excel, "rb") as f:
-                requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "caption": f"📁 File chi tiết sản lượng: SL BD ca1.xlsx ({total_table_1:,} đơn)"}, files={"document": f}, timeout=40)
+                caption = f"📁 File chi tiết sản lượng {shift_label}: SL BD {shift_code}.xlsx ({total_table_1:,} đơn)"
+                requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption}, files={"document": f}, timeout=40)
                 print("  ✓ Đã gửi file Excel lên Telegram.")
         except Exception as e:
             print(f"  ✗ Lỗi gửi file Excel Telegram: {e}")

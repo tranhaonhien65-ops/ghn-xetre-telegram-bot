@@ -60,9 +60,11 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
         if self.path.startswith("/run_sl"):
-            shift = "ca_dem"
-            if "ca_sang" in self.path:
-                shift = "ca_sang"
+            shift = "ca1"
+            if any(k in self.path for k in ["ca_sang", "ca_ngay", "ca2", "ca_2"]):
+                shift = "ca2"
+            elif any(k in self.path for k in ["ca_dem", "ca1", "ca_1"]):
+                shift = "ca1"
             try:
                 from sl_pipeline import run_pipeline
                 threading.Thread(target=run_pipeline, kwargs={"shift": shift}, daemon=True).start()

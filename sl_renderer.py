@@ -27,6 +27,16 @@ def get_bc_val(bc_counts, bc_name):
         for k, v in bc_counts.items():
             if "44" in k and "tây sơn" in k.lower():
                 return v
+    # Check partial match for Hoài Nhơn Nam
+    if "hoài nhơn nam" in clean_target:
+        for k, v in bc_counts.items():
+            if "hoài nhơn nam" in k.lower():
+                return v
+    # Check partial match for Hai Riềng
+    if "hai riêng" in clean_target:
+        for k, v in bc_counts.items():
+            if "hai riêng" in k.lower():
+                return v
     return 0
 
 def match_route(route_name, grp_name):
@@ -36,9 +46,11 @@ def match_route(route_name, grp_name):
     g1 = grp_name.replace("_", " ").replace("Đ", "D").replace("đ", "d").strip().upper()
     return r1 == g1
 
-def render_overview_image(route_summary, bc_counts, out_path=None):
+def render_overview_image(route_summary, bc_counts, shift="ca1", out_path=None):
+    is_ca2 = str(shift).lower() in ("ca2", "ca_2", "ca_sang", "ca_ngay", "ca 2")
     if out_path is None:
-        out_path = BASE_DIR / "SL_BD_ca1_overview.png"
+        default_fn = "SL_BD_ca2_overview.png" if is_ca2 else "SL_BD_ca1_overview.png"
+        out_path = BASE_DIR / default_fn
     out_path = Path(out_path)
 
     font_path_str = str(FONT_PATH) if FONT_PATH.exists() else "/System/Library/Fonts/Supplemental/Arial.ttf"
@@ -55,7 +67,7 @@ def render_overview_image(route_summary, bc_counts, out_path=None):
 
     # Canvas dimensions
     width = 1720
-    height = 840
+    height = 640 if is_ca2 else 840
     img = Image.new("RGB", (width, height), color="#ffffff")
     draw = ImageDraw.Draw(img)
 
@@ -156,49 +168,77 @@ def render_overview_image(route_summary, bc_counts, out_path=None):
     tw = bbox[2] - bbox[0]
     draw.text((t2_x + t2_col_w[0] + (t2_col_w[1] - tw) // 2, t2_y + 4), "SỐ ĐƠN", fill="#ffffff", font=font_header)
 
-    bd_groups = [
-        ("BD 13", [
-            "Bưu Cục Vận Hành Thôn Định Trị-Xã Vĩnh Thạnh-Bình Định",
-            "Bưu Cục 61 Quang Trung-Xã Vân Canh-Bình Định"
-        ]),
-        ("BD 01", [
-            "Bưu Cục Thôn Xuân Phong Nam-An Lão-Bình Định",
-            "(BDI) Hoài Nhơn Nam 1"
-        ]),
-        ("BD 03", [
-            "Bưu Cục 269 Tây Sơn-Quy Nhơn-Bình Định",
-            "Bưu Cục 396 Âu Cơ-Bùi Thị Xuân-Quy Nhơn-Bình Định",
-            "Bưu Cục 263 Đống Đa-Quy Nhơn-Bình Định"
-        ]),
-        ("BD 04", [
-            "Bưu Cục Đường 3 Tháng 2-Xã Phù Cát-Bình Định"
-        ]),
-        ("BD 05", [
-            "Bưu Cục 21 Tây Sơn-Xã Phù Mỹ-Bình Định",
-            "Bưu Cục 107 Nguyễn Lữ-Phù Mỹ-Bình Định"
-        ]),
-        ("BD 08", [
-            "Bưu Cục 767 Hùng Vương-Quy Nhơn-Bình Định",
-            "Bưu Cục Khu Vực Kim Châu-An Nhơn-Bình Định"
-        ]),
-        ("BD 12", [
-            "Kho Giao Hàng Nặng Hoài Nhơn-Bình Định",
-            "Bưu Cục Số 35 Phạm Văn Đồng-Tăng Bạt Hổ-Hoài Ân-Bình Định"
-        ]),
-        ("BD 14", [
-            "Bưu Cục Thôn Chánh Hóa-Xã Cát Tiến-Bình Định",
-            "(BDI) Tuy Phước Đông"
-        ]),
-        ("DN_BD_KH", [
-            "Bưu Cục 571 Trần Phú-Tuy Phước-Bình Định"
-        ]),
-        ("DN-QNG-BD", [
-            "Bưu Cục 838 Quang Trung-Phường Hoài Nhơn Tây-Bình Định"
-        ]),
-        ("GL_BD_01", [
-            "Bưu Cục 44 Quang Trung-Tây Sơn-Bình Định"
-        ])
-    ]
+    if is_ca2:
+        bd_groups = [
+            ("BĐ 02", [
+                "Bưu Cục Số 35 Phạm Văn Đồng-Tăng Bạt Hổ-Hoài Ân-Bình Định",
+                "Kho Giao Hàng Nặng Hoài Nhơn-Bình Định",
+                "Bưu Cục 838 Quang Trung-Phường Hoài Nhơn Tây-Bình Định",
+                "Bưu Cục Thôn Chánh Hóa-Xã Cát Tiến-Bình Định"
+            ]),
+            ("BĐ 06", [
+                "Bưu Cục 269 Tây Sơn-Quy Nhơn-Bình Định",
+                "Bưu Cục 767 Hùng Vương-Quy Nhơn-Bình Định",
+                "Bưu Cục 263 Đống Đa-Quy Nhơn-Bình Định",
+                "Bưu Cục 396 Âu Cơ-Bùi Thị Xuân-Quy Nhơn-Bình Định",
+                "Bưu Cục 571 Trần Phú-Tuy Phước-Bình Định"
+            ]),
+            ("BĐ 12", [
+                "Bưu Cục Đường 3 Tháng 2-Xã Phù Cát-Bình Định",
+                "Bưu Cục 21 Tây Sơn-Xã Phù Mỹ-Bình Định",
+                "Bưu Cục 107 Nguyễn Lữ-Phù Mỹ-Bình Định",
+                "(BDI) Hoài Nhơn Nam 1"
+            ]),
+            ("GL 05", [
+                "Bưu Cục 44 Quang Trung-Tây Sơn-Bình Định",
+                "Bưu Cục Khu Vực Kim Châu-An Nhơn-Bình Định",
+                "Bưu Cục Vận Hành Thôn Định Trị-Xã Vĩnh Thạnh-Bình Định"
+            ])
+        ]
+    else:
+        bd_groups = [
+            ("BD 13", [
+                "Bưu Cục Vận Hành Thôn Định Trị-Xã Vĩnh Thạnh-Bình Định",
+                "Bưu Cục 61 Quang Trung-Xã Vân Canh-Bình Định"
+            ]),
+            ("BD 01", [
+                "Bưu Cục Thôn Xuân Phong Nam-An Lão-Bình Định",
+                "(BDI) Hoài Nhơn Nam 1"
+            ]),
+            ("BD 03", [
+                "Bưu Cục 269 Tây Sơn-Quy Nhơn-Bình Định",
+                "Bưu Cục 396 Âu Cơ-Bùi Thị Xuân-Quy Nhơn-Bình Định",
+                "Bưu Cục 263 Đống Đa-Quy Nhơn-Bình Định"
+            ]),
+            ("BD 04", [
+                "Bưu Cục Đường 3 Tháng 2-Xã Phù Cát-Bình Định"
+            ]),
+            ("BD 05", [
+                "Bưu Cục 21 Tây Sơn-Xã Phù Mỹ-Bình Định",
+                "Bưu Cục 107 Nguyễn Lữ-Phù Mỹ-Bình Định"
+            ]),
+            ("BD 08", [
+                "Bưu Cục 767 Hùng Vương-Quy Nhơn-Bình Định",
+                "Bưu Cục Khu Vực Kim Châu-An Nhơn-Bình Định"
+            ]),
+            ("BD 12", [
+                "Kho Giao Hàng Nặng Hoài Nhơn-Bình Định",
+                "Bưu Cục Số 35 Phạm Văn Đồng-Tăng Bạt Hổ-Hoài Ân-Bình Định"
+            ]),
+            ("BD 14", [
+                "Bưu Cục Thôn Chánh Hóa-Xã Cát Tiến-Bình Định",
+                "(BDI) Tuy Phước Đông"
+            ]),
+            ("DN_BD_KH", [
+                "Bưu Cục 571 Trần Phú-Tuy Phước-Bình Định"
+            ]),
+            ("DN-QNG-BD", [
+                "Bưu Cục 838 Quang Trung-Phường Hoài Nhơn Tây-Bình Định"
+            ]),
+            ("GL_BD_01", [
+                "Bưu Cục 44 Quang Trung-Tây Sơn-Bình Định"
+            ])
+        ]
 
     cur_y = t2_y + row_h
     bd_total = 0
@@ -270,35 +310,59 @@ def render_overview_image(route_summary, bc_counts, out_path=None):
     tw = bbox[2] - bbox[0]
     draw.text((t3_x + t3_col_w[0] + (t3_col_w[1] - tw) // 2, t3_y + 4), "SỐ ĐƠN", fill="#ffffff", font=font_header)
 
-    py_groups = [
-        ("BD PY 01", [
-            "Bưu Cục KP4 Hòa Vinh- Đông Hòa- Phú yên",
-            "Bưu Cục Thị Trấn Phú Thứ-Tây Hoà-Phú Yên"
-        ]),
-        ("BD PY 02", [
-            "Bưu Cục 274 Hùng Vương-Tuy Hòa-Phú Yên",
-            "Kho Giao Hàng Nặng Phú Yên"
-        ]),
-        ("BD PY 03", [
-            "Bưu cục 138 Trần Phú-Đồng Xuân-Phú Yên",
-            "BƯU CỤC KHU PHỐ 3 - THỊ TRẤN HAI RIÊNG-SÔNG HÌNH-PHÚ YÊN",
-            "Bưu Cục Suối Bạc-Sơn Hòa-Phú Yên"
-        ]),
-        ("BD PY 06", [
-            "Bưu cục DT644-Sông Cầu-Phú Yên",
-            "Bưu cục 27 Nguyễn Tất Thành-Tuy Hòa-Phú Yên"
-        ]),
-        ("BD PY 06_01", [
-            "Bưu Cục Thôn Đông Phước-Phú Hòa-Phú Yên"
-        ]),
-        ("BD PY 08", [
-            "Bưu Cục 71 Quốc Lộ 1A-Xã Tuy An Bắc-Phú Yên",
-            "Bưu Cục Đường Tỉnh 643-Xã Tuy An Nam-Phú Yên"
-        ]),
-        ("GHN BÌNH ĐỊNH", [
-            "Kho Giao Hàng Nặng Bình Định"
-        ])
-    ]
+    if is_ca2:
+        py_groups = [
+            ("BĐ PY 04", [
+                "Bưu cục 27 Nguyễn Tất Thành-Tuy Hòa-Phú Yên",
+                "Bưu Cục Thôn Đông Phước-Phú Hòa-Phú Yên",
+                "Bưu cục DT644-Sông Cầu-Phú Yên"
+            ]),
+            ("BĐ PY 07", [
+                "Bưu Cục KP4 Hòa Vinh- Đông Hòa- Phú yên",
+                "Bưu Cục Thị Trấn Phú Thứ-Tây Hoà-Phú Yên"
+            ]),
+            ("BĐ PY 09", [
+                "Bưu Cục 274 Hùng Vương-Tuy Hòa-Phú Yên",
+                "Bưu Cục 71 Quốc Lộ 1A-Xã Tuy An Bắc-Phú Yên",
+                "Bưu Cục Đường Tỉnh 643-Xã Tuy An Nam-Phú Yên"
+            ]),
+            ("PY03 TC", [
+                "Bưu cục 138 Trần Phú-Đồng Xuân-Phú Yên",
+                "Bưu Cục 61 Quang Trung-Xã Vân Canh-Bình Định",
+                "BƯU CỤC KHU PHỐ 3 - THỊ TRẤN HAI RIÊNG-SÔNG HÌNH-PHÚ YÊN",
+                "Bưu Cục Suối Bạc-Sơn Hòa-Phú Yên"
+            ])
+        ]
+    else:
+        py_groups = [
+            ("BD PY 01", [
+                "Bưu Cục KP4 Hòa Vinh- Đông Hòa- Phú yên",
+                "Bưu Cục Thị Trấn Phú Thứ-Tây Hoà-Phú Yên"
+            ]),
+            ("BD PY 02", [
+                "Bưu Cục 274 Hùng Vương-Tuy Hòa-Phú Yên",
+                "Kho Giao Hàng Nặng Phú Yên"
+            ]),
+            ("BD PY 03", [
+                "Bưu cục 138 Trần Phú-Đồng Xuân-Phú Yên",
+                "BƯU CỤC KHU PHỐ 3 - THỊ TRẤN HAI RIÊNG-SÔNG HÌNH-PHÚ YÊN",
+                "Bưu Cục Suối Bạc-Sơn Hòa-Phú Yên"
+            ]),
+            ("BD PY 06", [
+                "Bưu cục DT644-Sông Cầu-Phú Yên",
+                "Bưu cục 27 Nguyễn Tất Thành-Tuy Hòa-Phú Yên"
+            ]),
+            ("BD PY 06_01", [
+                "Bưu Cục Thôn Đông Phước-Phú Hòa-Phú Yên"
+            ]),
+            ("BD PY 08", [
+                "Bưu Cục 71 Quốc Lộ 1A-Xã Tuy An Bắc-Phú Yên",
+                "Bưu Cục Đường Tỉnh 643-Xã Tuy An Nam-Phú Yên"
+            ]),
+            ("GHN BÌNH ĐỊNH", [
+                "Kho Giao Hàng Nặng Bình Định"
+            ])
+        ]
 
     cur_y = t3_y + row_h
     py_total = 0

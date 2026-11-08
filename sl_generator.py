@@ -7,19 +7,24 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 
-def load_dictionaries():
+def load_dictionaries(shift="ca1"):
     mapping_json = BASE_DIR / "mappings.json"
     if mapping_json.exists():
         try:
             with open(mapping_json, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                return data.get("ma_to_ten", {}), data.get("ten_to_tuyen", {})
+                ma_to_ten = data.get("ma_to_ten", {})
+                if str(shift).lower() in ("ca2", "ca_2", "ca_sang", "ca_ngay", "ca 2"):
+                    ten_to_tuyen = data.get("ten_to_tuyen_ca2", {})
+                else:
+                    ten_to_tuyen = data.get("ten_to_tuyen_ca1", data.get("ten_to_tuyen", {}))
+                return ma_to_ten, ten_to_tuyen
         except Exception as e:
             print(f"[WARN] Lỗi đọc mappings.json: {e}")
     return {}, {}
 
-def process_orders(rows, ma_to_ten, ten_to_tuyen):
-    ROUTE_CAPACITY = {
+def process_orders(rows, ma_to_ten, ten_to_tuyen, shift="ca1"):
+    ROUTE_CAPACITY_CA1 = {
         "BĐ 01": ("5T", 1500),
         "BĐ 03": ("1T9", 700),
         "BĐ 04": ("1T9", 700),
@@ -39,6 +44,20 @@ def process_orders(rows, ma_to_ten, ten_to_tuyen):
         "GL_BD_01": ("1T9", 700),
         "GHN BÌNH ĐỊNH": ("N/A", 0),
     }
+
+    ROUTE_CAPACITY_CA2 = {
+        "BĐ 02": ("1T9", 900),
+        "BĐ 06": ("1T9", 900),
+        "BĐ 12": ("1T9", 900),
+        "BĐ PY 04": ("1T9", 900),
+        "BĐ PY 07": ("1T9", 900),
+        "BĐ PY 09": ("1T9", 900),
+        "GL 05": ("5T", 1400),
+        "PY03 TC": ("1T9", 900),
+    }
+
+    is_ca2 = str(shift).lower() in ("ca2", "ca_2", "ca_sang", "ca_ngay", "ca 2")
+    route_capacity = ROUTE_CAPACITY_CA2 if is_ca2 else ROUTE_CAPACITY_CA1
 
     processed_orders = []
     route_orders = {}
@@ -64,11 +83,12 @@ def process_orders(rows, ma_to_ten, ten_to_tuyen):
         if not tuyen:
             tuyen = ten_to_tuyen_lower.get(ten_kho_giao.strip().lower(), "Chưa phân tuyến")
 
-        # QUY TẮC YÊU CẦU: Sản lượng kho GHN Hoài Nhơn (22168000) bỏ vào tuyến xe BĐ 12
-        if kho_giao_id == "22168000" or ("hoài nhơn" in ten_kho_giao.lower() and "nặng" in ten_kho_giao.lower()):
-            tuyen = "BĐ 12"
-        elif tuyen.strip().upper() == "GHN HOÀI NHƠN":
-            tuyen = "BĐ 12"
+        # QUY TẮC YÊU CẦU: Sản lượng kho GHN Hoài Nhơn (22168000) bỏ vào tuyến xe BĐ 12 (chỉ áp dụng Ca 1)
+        if not is_ca2:
+            if kho_giao_id == "22168000" or ("hoài nhơn" in ten_kho_giao.lower() and "nặng" in ten_kho_giao.lower()):
+                tuyen = "BĐ 12"
+            elif tuyen.strip().upper() == "GHN HOÀI NHƠN":
+                tuyen = "BĐ 12"
 
         processed_orders.append({
             "package": pkg,
@@ -89,7 +109,7 @@ def process_orders(rows, ma_to_ten, ten_to_tuyen):
             bc_orders[ten_kho_giao] = bc_orders.get(ten_kho_giao, 0) + 1
 
     summary_routes = []
-    for route, (tai_trong, cap) in ROUTE_CAPACITY.items():
+    for route, (tai_trong, cap) in route_capacity.items():
         so_don = route_orders.get(route, 0)
         pct = (so_don / cap) * 100.0 if cap > 0 else 0.0
         note = "Rớt" if (cap > 0 and pct > 100.0) else "Không Rớt"
