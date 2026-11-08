@@ -57,6 +57,19 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.end_headers()
 
+        if self.path.startswith("/run_sl"):
+            shift = "ca_dem"
+            if "ca_sang" in self.path:
+                shift = "ca_sang"
+            try:
+                from sl_pipeline import run_pipeline
+                threading.Thread(target=run_pipeline, kwargs={"shift": shift}, daemon=True).start()
+                res = {"status": "success", "message": f"Triggered SL report {shift} in background"}
+            except Exception as e:
+                res = {"status": "error", "message": str(e)}
+            self.wfile.write(json.dumps(res, ensure_ascii=False, indent=2).encode("utf-8"))
+            return
+
         token = get_ghn_token()
         valid = is_token_valid(token)
         token_info = {"valid": valid}
@@ -127,25 +140,45 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
                 content_len = int(self.headers.get("Content-Length", 0))
                 body = self.rfile.read(content_len).decode("utf-8")
                 data = json.loads(body)
-                raw_token = data.get("token", "").strip()
+                raw_token = data.get("token", "").strip() or data.get("url", "").strip() or body
+                
+                # Smart Token Extraction for all GHN & Metabase tokens
+                import re, base64
+                mb_match = re.search(r'embed/dashboard/([a-zA-Z0-9_\-\.]+)', raw_token)
+                if mb_match:
+                    jwt = mb_match.group(1).split('?')[0].split('/')[0]
+                    (BASE_DIR / "metabase_jwt.txt").write_text(jwt.strip(), encoding="utf-8")
+                    print(f"📊 [CLOUD] Đã nhận và lưu Metabase JWT mới!")
+                
+                tokens = re.findall(r'eyJhbGciOi[a-zA-Z0-9_\-\.]+', raw_token)
+                for t in tokens:
+                    try:
+                        part = t.split('.')[1]
+                        part += '=' * (-len(part) % 4)
+                        pl = json.loads(base64.urlsafe_b64decode(part))
+                        if 'resource' in pl and 'dashboard' in pl.get('resource', {}):
+                            (BASE_DIR / "metabase_jwt.txt").write_text(t.strip(), encoding="utf-8")
+                            print(f"📊 [CLOUD] Đã nhận và lưu Metabase JWT mới!")
+                        elif 'ssoId' in pl or 'orgCode' in pl:
+                            (BASE_DIR / "ghn_sso_token.txt").write_text(t.strip(), encoding="utf-8")
+                            print(f"🔑 [CLOUD] Đã nhận và lưu GHN SSO Token mới!")
+                        elif pl.get('typ') in ('coordinator', 'staff') or pl.get('hid') or pl.get('noc'):
+                            save_ghn_token(t.strip())
+                            print(f"🚛 [CLOUD] Đã nhận và lưu GHN Coordinator Token mới!")
+                    except Exception:
+                        pass
+
                 if raw_token.lower().startswith("bearer "):
                     raw_token = raw_token[7:].strip()
                 if raw_token and len(raw_token) > 20:
-                    if save_ghn_token(raw_token):
-                        self.send_response(200)
-                        self._send_cors()
-                        self.send_header("Content-Type", "application/json")
-                        self.end_headers()
-                        self.wfile.write(json.dumps({"status": "success", "message": "Token synced to cloud"}).encode("utf-8"))
-                        print(f"🔑 [CLOUD] Đã nhận và nạp Token GHN mới qua Webhook!")
-                        return
-                    else:
-                        self.send_response(400)
-                        self._send_cors()
-                        self.send_header("Content-Type", "application/json")
-                        self.end_headers()
-                        self.wfile.write(json.dumps({"status": "error", "message": "Token invalid or expired"}).encode("utf-8"))
-                        return
+                    save_ghn_token(raw_token)
+
+                self.send_response(200)
+                self._send_cors()
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "message": "Tokens synced to cloud"}).encode("utf-8"))
+                return
             except Exception as e:
                 print(f"[ERROR] Cloud Token sync error: {e}")
 
@@ -177,7 +210,7 @@ def keep_awake_pinger():
         time.sleep(600)  # Ping every 10 minutes (Render sleeps after 15m)
 
 def run_cloud():
-    # 1. Start background Bot thread
+    # 1. Start background Bot thread (Báo xe trễ)
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
 
@@ -185,7 +218,16 @@ def run_cloud():
     pinger_thread = threading.Thread(target=keep_awake_pinger, daemon=True)
     pinger_thread.start()
 
-    # 3. Run HTTP server on $PORT for Render health checks and Webhook
+    # 3. Start SL Reporter Scheduler (Báo cáo sản lượng 07:00 & 15:00)
+    try:
+        from sl_pipeline import run_sl_scheduler
+        sl_thread = threading.Thread(target=run_sl_scheduler, daemon=True)
+        sl_thread.start()
+        print("⏰ [CLOUD] Đã khởi động luồng tự động báo cáo sản lượng (07:00 & 15:00)!")
+    except Exception as e:
+        print(f"[WARN] Không thể khởi động SL Scheduler: {e}")
+
+    # 4. Run HTTP server on $PORT for Render health checks and Webhook
     server = ReusableThreadingServer(("0.0.0.0", PORT), CloudTokenHandler)
     print(f"🚀 Cloud Web Server running on port {PORT}...")
     server.serve_forever()
