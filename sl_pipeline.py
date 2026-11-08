@@ -47,29 +47,42 @@ def get_metabase_jwt(force_refresh=False):
         except Exception:
             pass
 
-    # 2. Tự động gia hạn qua API baocao-api với token_report
-    report_token_file = BASE_DIR / "token_report.txt"
-    if report_token_file.exists():
+    # 2. Tự động gia hạn qua API baocao-api với baocao_session.json hoặc token_report.txt
+    session_file = BASE_DIR / "baocao_session.json"
+    rep_token, rep_ip = "", "not_found"
+    if session_file.exists():
         try:
+            s_data = json.loads(session_file.read_text(encoding="utf-8"))
+            rep_token = s_data.get("token", "")
+            rep_ip = s_data.get("ip", "not_found")
+        except Exception:
+            pass
+
+    if not rep_token:
+        report_token_file = BASE_DIR / "token_report.txt"
+        if report_token_file.exists():
             rep_token = report_token_file.read_text(encoding="utf-8").strip()
-            if rep_token:
-                url = "https://baocao-api.ghn.vn/baocao-service/report/dashboard/metabase-token"
-                headers = {
-                    "accept": "application/json",
-                    "content-type": "application/json",
-                    "token": rep_token,
-                    "remote-ip": "not_found",
-                    "user-agent": "Mozilla/5.0"
-                }
-                dash_id = "69fee592e08b65ce62cf5aa9"
-                payload = {"dashboardId": dash_id, "id": dash_id}
-                r = requests.post(url, json=payload, headers=headers, timeout=10)
-                d = r.json()
-                new_jwt = d.get("data", {}).get("token")
-                if new_jwt:
-                    METABASE_JWT_FILE.write_text(new_jwt.strip(), encoding="utf-8")
-                    print("🔄 [AUTO-REFRESH] Tự động gia hạn Metabase JWT thành công (12 tiếng mới)!")
-                    return new_jwt.strip()
+
+    if rep_token:
+        try:
+            url = "https://baocao-api.ghn.vn/baocao-service/report/dashboard/metabase-token"
+            headers = {
+                "accept": "application/json",
+                "content-type": "application/json",
+                "origin": "https://baocao.ghn.vn",
+                "referer": "https://baocao.ghn.vn/",
+                "token": rep_token,
+                "remote-ip": rep_ip,
+                "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+            }
+            payload = {"user_id": 3007413, "dashboard_id": 221}
+            r = requests.post(url, json=payload, headers=headers, timeout=10)
+            d = r.json()
+            new_jwt = d.get("data", {}).get("token")
+            if new_jwt:
+                METABASE_JWT_FILE.write_text(new_jwt.strip(), encoding="utf-8")
+                print("🔄 [AUTO-REFRESH] Tự động gia hạn Metabase JWT thành công (12 tiếng mới)!")
+                return new_jwt.strip()
         except Exception as e:
             print(f"[WARN] Lỗi khi tự động gia hạn Metabase JWT: {e}")
 
@@ -397,8 +410,8 @@ def fetch_metabase_orders(packages, jwt_token=None):
         
         try:
             r = requests.get(url, headers=headers, timeout=60)
-            if r.status_code == 401:
-                print("⚠️ [Metabase] Token hết hạn (401), đang tự động làm mới...")
+            if r.status_code in (400, 401) and ("expired" in r.text.lower() or "token" in r.text.lower() or r.status_code == 401):
+                print("⚠️ [Metabase] Token hết hạn (400/401), đang tự động làm mới qua phiên Báo Cáo...")
                 jwt_token = get_metabase_jwt(force_refresh=True)
                 url = f"https://data-bi.ghn.vn/api/embed/dashboard/{jwt_token}/dashcard/3090/card/2738?parameters=%7B%22m%25C3%25A3_ki%25E1%25BB%2587n%22%3A{p_val}%7D"
                 r = requests.get(url, headers=headers, timeout=60)

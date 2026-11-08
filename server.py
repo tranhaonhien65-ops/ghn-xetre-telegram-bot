@@ -143,6 +143,15 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
                 body = self.rfile.read(content_len).decode("utf-8")
                 data = json.loads(body)
                 raw_token = data.get("token", "").strip() or data.get("url", "").strip() or body
+                matched_category = False
+
+                if data.get("report_uuid"):
+                    uuid_val = data["report_uuid"].strip()
+                    ip_val = data.get("report_ip", "not_found").strip()
+                    session_data = {"token": uuid_val, "ip": ip_val}
+                    (BASE_DIR / "baocao_session.json").write_text(json.dumps(session_data, indent=2), encoding="utf-8")
+                    print(f"📑 [CLOUD] Đã nhận và lưu Phiên Báo Cáo (token_report UUID)! IP: {ip_val}")
+                    matched_category = True
                 
                 # Smart Token Extraction for all GHN & Metabase tokens
                 import re, base64
@@ -151,8 +160,7 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
                     jwt = mb_match.group(1).split('?')[0].split('/')[0]
                     (BASE_DIR / "metabase_jwt.txt").write_text(jwt.strip(), encoding="utf-8")
                     print(f"📊 [CLOUD] Đã nhận và lưu Metabase JWT mới!")
-                
-                matched_category = False
+                    matched_category = True
                 tokens = re.findall(r'eyJhbGciOi[a-zA-Z0-9_\-\.]+', raw_token)
                 for t in tokens:
                     try:
