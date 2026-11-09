@@ -90,7 +90,7 @@ def get_metabase_jwt(force_refresh=False):
         return METABASE_JWT_FILE.read_text(encoding="utf-8").strip()
     return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3OTQxNTA3MTcsInBhcmFtcyI6eyJ1c2VyX2lkIjoiMzAwNzQxMyJ9LCJyZXNvdXJjZSI6eyJkYXNoYm9hcmQiOjIyMX19.kyH1qAUikrOYLN0kHyrvZ4r_bVuTpMiaW25ksB1621E"
 
-def fetch_trip_stop_times(code, sso_token):
+def fetch_trip_stop_info(code, sso_token, target_eta=None):
     headers = {
         "accept": "*/*",
         "authorization": f"Bearer {sso_token}",
@@ -104,21 +104,50 @@ def fetch_trip_stop_times(code, sso_token):
         data = r.json()
         trip_data = data.get("data", [{}])[0]
         plate = trip_data.get("partnerVehicleNumber", "")
-        stops = trip_data.get("stopsInfo", [])
-        arr_dt, dep_dt = None, None
-        for s in stops:
-            if str(s.get("locationId")) == "20335000":
-                arr = s.get("expectedArrivalTime")
-                dep = s.get("expectedDepartureTime")
-                if arr:
-                    arr_dt = datetime.fromisoformat(arr.replace("Z", "+00:00")).astimezone(VN_TZ)
-                if dep:
-                    dep_dt = datetime.fromisoformat(dep.replace("Z", "+00:00")).astimezone(VN_TZ)
-                break
-        return arr_dt, dep_dt, plate
+        stops = [s for s in trip_data.get("stopsInfo", []) if str(s.get("locationId")) == "20335000"]
+        if not stops:
+            return None
+        
+        matched_stop = stops[0]
+        if len(stops) > 1 and target_eta:
+            def time_diff(s):
+                exp = s.get("expectedArrivalTime")
+                if not exp: return 999999999
+                try:
+                    dt = datetime.fromisoformat(exp.replace("Z", "+00:00")).astimezone(VN_TZ)
+                    return abs((dt - target_eta).total_seconds())
+                except Exception:
+                    return 999999999
+            matched_stop = min(stops, key=time_diff)
+
+        exp_arr = matched_stop.get("expectedArrivalTime")
+        exp_dep = matched_stop.get("expectedDepartureTime")
+        act_arr = matched_stop.get("arrivalTime")
+        act_dep = matched_stop.get("departureTime")
+        status = matched_stop.get("status")
+
+        exp_arr_dt = datetime.fromisoformat(exp_arr.replace("Z", "+00:00")).astimezone(VN_TZ) if exp_arr else None
+        exp_dep_dt = datetime.fromisoformat(exp_dep.replace("Z", "+00:00")).astimezone(VN_TZ) if exp_dep else None
+        act_arr_dt = datetime.fromisoformat(act_arr.replace("Z", "+00:00")).astimezone(VN_TZ) if act_arr else None
+        act_dep_dt = datetime.fromisoformat(act_dep.replace("Z", "+00:00")).astimezone(VN_TZ) if act_dep else None
+
+        return {
+            "plate": plate,
+            "status": status,
+            "exp_arr_dt": exp_arr_dt,
+            "exp_dep_dt": exp_dep_dt,
+            "act_arr_dt": act_arr_dt,
+            "act_dep_dt": act_dep_dt
+        }
     except Exception as e:
         print(f"[WARN] Lỗi tra cứu chi tiết chuyến {code}: {e}")
-        return None, None, ""
+        return None
+
+def fetch_trip_stop_times(code, sso_token, target_eta=None):
+    info = fetch_trip_stop_info(code, sso_token, target_eta)
+    if info:
+        return info["exp_arr_dt"], info["exp_dep_dt"], info["plate"]
+    return None, None, ""
 
 CACHE_FILE = BASE_DIR / "daily_trips_cache.json"
 
@@ -156,8 +185,8 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
     if not target_date:
         target_date = datetime.now(VN_TZ)
 
-    start_local = datetime(target_date.year, target_date.month, target_date.day, 0, 0, 0, tzinfo=VN_TZ)
-    end_local = datetime(target_date.year, target_date.month, target_date.day, 23, 59, 59, tzinfo=VN_TZ) + timedelta(days=1)
+    start_local = (target_date - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    end_local = (target_date + timedelta(days=1)).replace(hour=23, minute=59, second=59, microsecond=0)
     
     start_utc = (start_local - timedelta(hours=7)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
     end_utc = (end_local - timedelta(hours=7)).strftime("%Y-%m-%dT%H:%M:%S.999Z")
@@ -180,27 +209,49 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
 
     all_raw_trips = []
     seen_codes = set()
+    live_upcoming_codes = set()
+    live_arrived_codes = set()
 
-    endpoints = [
-        ("/tms/v1/transportation/get-upcoming-transports", "Sắp đến kho"),
-        ("/tms/v1/transportation/get-arrived-transports", "Đã đến kho")
-    ]
+    # 1. Xe sắp đến kho (trên đường tới)
+    url_up = "https://inside-prd-api.ghn.vn/tms/v1/transportation/get-upcoming-transports"
+    try:
+        r = requests.post(url_up, json=payload, headers=headers, timeout=12)
+        res = r.json()
+        data_field = res.get("data")
+        trips = data_field[0].get("list", []) if isinstance(data_field, list) and data_field else []
+        for t in trips:
+            code = t.get("partnerTransportationCode")
+            if code and code not in seen_codes:
+                seen_codes.add(code)
+                live_upcoming_codes.add(code)
+                t["tab"] = "Sắp đến kho"
+                all_raw_trips.append(t)
+    except Exception as e:
+        print(f"[WARN] Lỗi khi gọi get-upcoming-transports: {e}")
 
-    for ep, tab_label in endpoints:
-        url = f"https://inside-prd-api.ghn.vn{ep}"
-        try:
-            r = requests.post(url, json=payload, headers=headers, timeout=12)
-            res = r.json()
-            data_field = res.get("data")
-            trips = data_field[0].get("list", []) if isinstance(data_field, list) and data_field else []
-            for t in trips:
-                code = t.get("partnerTransportationCode")
-                if code and code not in seen_codes:
+    # 2. Xe đã đến kho
+    url_arr = "https://inside-prd-api.ghn.vn/tms/v1/transportation/get-arrived-transports"
+    try:
+        r = requests.post(url_arr, json=payload, headers=headers, timeout=12)
+        res = r.json()
+        data_field = res.get("data")
+        trips = data_field[0].get("list", []) if isinstance(data_field, list) and data_field else []
+        for t in trips:
+            code = t.get("partnerTransportationCode")
+            if code:
+                live_arrived_codes.add(code)
+                if code not in seen_codes:
                     seen_codes.add(code)
-                    t["tab"] = tab_label
+                    t["tab"] = "Đã đến kho"
                     all_raw_trips.append(t)
-        except Exception as e:
-            print(f"[WARN] Lỗi khi gọi {ep}: {e}")
+                else:
+                    for ex in all_raw_trips:
+                        if ex.get("partnerTransportationCode") == code:
+                            ex["tab"] = "Đã đến kho"
+                            if t.get("arrivalTime"):
+                                ex["arrivalTime"] = t.get("arrivalTime")
+    except Exception as e:
+        print(f"[WARN] Lỗi khi gọi get-arrived-transports: {e}")
 
     # Đồng bộ với bộ nhớ đệm cache chuyến đi trong ngày (tránh mất các xe đã rời kho)
     cached_trips = load_cached_trips()
@@ -212,10 +263,13 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
     for code, t in cached_trips.items():
         if code not in seen_codes:
             seen_codes.add(code)
+            # Xe trong cache không nằm trong danh sách live upcoming/arrived nghĩa là đã rời kho hoặc hoàn thành
+            t["tab"] = "Đã rời kho"
             all_raw_trips.append(t)
     save_cached_trips(cached_trips)
 
-    if shift in ("ca_sang", "ca_ngay", "ca2", "ca_2", "ca 2"):
+    is_ca2 = shift in ("ca_sang", "ca_ngay", "ca2", "ca_2", "ca 2")
+    if is_ca2:
         shift_std_start = datetime(target_date.year, target_date.month, target_date.day, 5, 0, 0, tzinfo=VN_TZ)
         shift_std_end = datetime(target_date.year, target_date.month, target_date.day, 9, 0, 0, tzinfo=VN_TZ)
         rollover_start = shift_std_start - timedelta(hours=12) # Các xe ca đêm hôm trước
@@ -238,8 +292,14 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
 
     matched_trips = []
     for t in all_raw_trips:
+        code = t.get("partnerTransportationCode")
+        if not code:
+            continue
         eta_str = t.get("expectedArrivalTime")
         if not eta_str:
+            continue
+        type_ops = (t.get("typeOps") or "").lower()
+        if type_ops == "pickup":
             continue
         try:
             utc_dt = datetime.fromisoformat(eta_str.replace("Z", "+00:00"))
@@ -248,40 +308,48 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
             matched = False
             note_shift = ""
 
-            if shift in ("ca_sang", "ca_ngay", "ca2", "ca_2", "ca 2"):
-                if shift_std_start < vn_dt <= shift_std_end:
+            if shift_std_start < vn_dt <= shift_std_end:
+                # Xe có lịch dự kiến tới trong ca hiện tại
+                # Kiểm tra nếu xe đã rời kho trước khi ca bắt đầu -> không thuộc ca này
+                dep_str = t.get("departureTime")
+                if dep_str:
+                    try:
+                        dep_vn = datetime.fromisoformat(dep_str.replace("Z", "+00:00")).astimezone(VN_TZ)
+                        if dep_vn < shift_std_start:
+                            continue
+                    except Exception:
+                        pass
+                matched = True
+
+            elif rollover_start <= vn_dt <= shift_std_start:
+                # Xe có lịch dự kiến ở ca trước.
+                # CHỈ được tính dồn sang ca hiện tại nếu:
+                # 1. Xe THỰC SỰ ĐANG TRÊN ĐƯỜNG tới (nằm trong live_upcoming_codes của API hiện tại)
+                # 2. Hoặc xe có thời gian thực tế đến kho trong ca này (actualArrivalTime >= shift_std_start)
+                if code in live_upcoming_codes:
                     matched = True
-                elif rollover_start <= vn_dt <= shift_std_start:
-                    tab = t.get("tab", "")
-                    arr_time = t.get("arrivalTime") or t.get("departureTime")
+                    note_shift = "Trễ từ Ca Đêm sang" if is_ca2 else "Trễ từ Ca Ngày sang"
+                else:
+                    arr_time = t.get("arrivalTime")
+                    if not arr_time:
+                        stop_info = fetch_trip_stop_info(code, sso_token, target_eta=vn_dt)
+                        if stop_info:
+                            if stop_info.get("act_arr_dt"):
+                                arr_time = stop_info["act_arr_dt"].isoformat()
+                                t["arrivalTime"] = arr_time
+                            if stop_info.get("act_dep_dt"):
+                                t["departureTime"] = stop_info["act_dep_dt"].isoformat()
+                            if stop_info.get("status") == "COMPLETED":
+                                t["tab"] = "Đã rời kho"
+
                     if arr_time:
                         try:
                             arr_vn = datetime.fromisoformat(arr_time.replace("Z", "+00:00")).astimezone(VN_TZ)
                             if arr_vn >= shift_std_start:
                                 matched = True
-                                note_shift = "Trễ từ Ca Đêm sang"
+                                note_shift = "Trễ từ Ca Đêm sang" if is_ca2 else "Trễ từ Ca Ngày sang"
                         except Exception:
                             pass
-                    elif tab == "Sắp đến kho":
-                        matched = True
-                        note_shift = "Trễ từ Ca Đêm sang"
-            else:
-                if shift_std_start < vn_dt <= shift_std_end:
-                    matched = True
-                elif rollover_start <= vn_dt <= shift_std_start:
-                    tab = t.get("tab", "")
-                    arr_time = t.get("arrivalTime") or t.get("departureTime")
-                    if arr_time:
-                        try:
-                            arr_vn = datetime.fromisoformat(arr_time.replace("Z", "+00:00")).astimezone(VN_TZ)
-                            if arr_vn >= shift_std_start:
-                                matched = True
-                                note_shift = "Trễ từ Ca Ngày sang"
-                        except Exception:
-                            pass
-                    elif tab == "Sắp đến kho":
-                        matched = True
-                        note_shift = "Trễ từ Ca Ngày sang"
 
             if matched:
                 code = t.get("partnerTransportationCode")
@@ -450,12 +518,12 @@ def run_pipeline(shift="ca1", target_date=None):
     packages, trip_to_pkgs, valid_matched_trips = extract_packages_for_trips(matched_trips, sso_token)
     print(f"📦 Tổng cộng thu thập được: {len(packages)} mã kiện duy nhất.")
 
-    if not packages:
-        print("⚠️ Chưa có kiện hàng nào trong các chuyến xe này.")
-        return
-
-    orders_rows = fetch_metabase_orders(packages)
-    print(f"✅ Lấy thành công: {len(orders_rows)} đơn hàng từ Metabase.")
+    if not packages or not valid_matched_trips:
+        print("⚠️ Không có kiện hàng / chuyến xe nào hợp lệ trong ca này.")
+        orders_rows = []
+    else:
+        orders_rows = fetch_metabase_orders(packages)
+        print(f"✅ Lấy thành công: {len(orders_rows)} đơn hàng từ Metabase.")
 
     ma_to_ten, ten_to_tuyen = load_dictionaries(shift=shift_code)
     processed_orders, summary_routes, bc_orders = process_orders(orders_rows, ma_to_ten, ten_to_tuyen, shift=shift_code)
@@ -551,12 +619,12 @@ def send_telegram_photo_and_trucks(shift_label, target_date, total_orders, bd_to
             print(f"  ✗ Lỗi gửi ảnh Telegram: {e}")
 
     # 2. GỬI DANH SÁCH XE TRỤC
-    if truck_data:
-        try:
-            lines = [
-                f"🚚 <b>DANH SÁCH XE TRỤC VỀ TRONG {shift_label.upper()} ({date_str})</b>",
-                "━━━━━━━━━━━━━━━━━━━━"
-            ]
+    try:
+        lines = [
+            f"🚚 <b>DANH SÁCH XE TRỤC VỀ TRONG {shift_label.upper()} ({date_str})</b>",
+            "━━━━━━━━━━━━━━━━━━━━"
+        ]
+        if truck_data:
             total_truck_pkgs = 0
             total_truck_orders = 0
             for idx, tr in enumerate(truck_data, start=1):
@@ -577,13 +645,17 @@ def send_telegram_photo_and_trucks(shift_label, target_date, total_orders, bd_to
 
             lines.append("━━━━━━━━━━━━━━━━━━━━")
             lines.append(f"🎯 <b>TỔNG CỘNG:</b> <b>{len(truck_data)} xe trục</b> | <b>{total_truck_pkgs:,} kiện</b> | <b>{total_truck_orders:,} đơn</b>")
+        else:
+            lines.append("<i>Không có xe trục về trong ca.</i>")
+            lines.append("━━━━━━━━━━━━━━━━━━━━")
+            lines.append("🎯 <b>TỔNG CỘNG:</b> <b>0 xe trục</b> | <b>0 kiện</b> | <b>0 đơn</b>")
 
-            truck_msg = "\n".join(lines)
-            url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-            requests.post(url, data={"chat_id": chat_id, "text": truck_msg, "parse_mode": "HTML"}, timeout=15)
-            print("  ✓ Đã gửi danh sách xe trục lên Telegram.")
-        except Exception as e:
-            print(f"  ✗ Lỗi gửi danh sách xe trục Telegram: {e}")
+        truck_msg = "\n".join(lines)
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        requests.post(url, data={"chat_id": chat_id, "text": truck_msg, "parse_mode": "HTML"}, timeout=15)
+        print("  ✓ Đã gửi danh sách xe trục lên Telegram.")
+    except Exception as e:
+        print(f"  ✗ Lỗi gửi danh sách xe trục Telegram: {e}")
 
 def run_sl_scheduler():
     print("⏰ SL Reporter Scheduler Thread running (Render 24/7)...")
