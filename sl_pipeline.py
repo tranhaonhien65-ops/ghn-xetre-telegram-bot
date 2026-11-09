@@ -407,6 +407,9 @@ def extract_packages_for_trips(trips_list, sso_token):
             url = f"https://inside-prd-api.ghn.vn/lms/v1/tms-history?q={requests.utils.quote(q_param)}&offset={offset}&limit={limit}&locationId=20335000&locationType=GHN_HUB&source=INSIDE_WEB_APP/ktc-van-tai/transport/detail"
             try:
                 r = requests.get(url, headers=headers, timeout=8)
+                if r.status_code == 401 or "TOKEN_NOT_ALIVE" in r.text or "UNAUTHORIZED" in r.text:
+                    print("⚠️ [ERROR] SSO Token đã chết (TOKEN_NOT_ALIVE) khi gọi TMS history!")
+                    raise PermissionError("SSO Token hết hạn (TOKEN_NOT_ALIVE)")
                 data = r.json().get("data", [])
                 if not data:
                     break
@@ -515,7 +518,22 @@ def run_pipeline(shift="ca1", target_date=None):
     matched_trips = fetch_trips_for_shift(shift, dt, sso_token)
     print(f"🚚 Tìm thấy {len(matched_trips)} chuyến xe {shift_label}")
 
-    packages, trip_to_pkgs, valid_matched_trips = extract_packages_for_trips(matched_trips, sso_token)
+    try:
+        packages, trip_to_pkgs, valid_matched_trips = extract_packages_for_trips(matched_trips, sso_token)
+    except PermissionError:
+        print("⚠️ [ERROR] Không thể lấy kiện hàng vì Token GHN đã hết hạn!")
+        msg_err = (
+            f"⚠️ <b>CẢNH BÁO BÁO CÁO SẢN LƯỢNG {shift_label.upper()} ({date_str}):</b>\n"
+            f"Hệ thống phát hiện có <b>{len(matched_trips)} chuyến xe trục</b> nhưng không thể quét dữ liệu kiện hàng do <b>Token GHN đã hết hạn (TOKEN_NOT_ALIVE)!</b>\n\n"
+            f"👉 <b>Khắc phục:</b> Vui lòng mở trang <code>https://baocao.ghn.vn/</code> hoặc <code>https://nhanh.ghn.vn/</code> trên trình duyệt để cập nhật Token mới!"
+        )
+        try:
+            url_err = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+            requests.post(url_err, data={"chat_id": TELEGRAM_CHAT_ID, "text": msg_err, "parse_mode": "HTML"}, timeout=15)
+        except Exception:
+            pass
+        return
+
     print(f"📦 Tổng cộng thu thập được: {len(packages)} mã kiện duy nhất.")
 
     if not packages or not valid_matched_trips:
@@ -685,13 +703,13 @@ def run_sl_scheduler():
             hour = now.hour
             minute = now.minute
 
-            # 07:00 -> Ca Sáng
-            if hour == 7 and minute >= 0 and last_run_day_sang != cur_day:
+            # 07:00 -> Ca Sáng (chỉ kích hoạt trong 5 phút đầu 07:00 - 07:05)
+            if hour == 7 and 0 <= minute <= 5 and last_run_day_sang != cur_day:
                 last_run_day_sang = cur_day
                 run_pipeline(shift="ca_sang")
 
-            # 15:00 -> Ca Đêm
-            if hour == 15 and minute >= 0 and last_run_day_dem != cur_day:
+            # 15:00 -> Ca Đêm (chỉ kích hoạt trong 5 phút đầu 15:00 - 15:05)
+            if hour == 15 and 0 <= minute <= 5 and last_run_day_dem != cur_day:
                 last_run_day_dem = cur_day
                 run_pipeline(shift="ca_dem")
         except Exception as e:
