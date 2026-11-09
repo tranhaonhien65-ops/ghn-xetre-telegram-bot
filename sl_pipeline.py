@@ -444,7 +444,9 @@ def extract_packages_for_trips(trips_list, sso_token):
                 if p and str(p).startswith("26"):
                     trip_pkgs.add(str(p).strip())
 
-        if len(trip_pkgs) > 0:
+        w_drop = t.get("willDropOff") or {}
+        has_dropoff = any(bool(w_drop.get(k, 0)) for k in ("numOfPkgBulky", "numOfPkg", "numOfBag", "numOfPkgRelay", "numOfRelay"))
+        if len(trip_pkgs) > 0 or has_dropoff:
             all_packages.update(trip_pkgs)
             trip_to_pkgs[code] = trip_pkgs
             valid_matched_trips.append((t, eta, len(trip_pkgs)))
@@ -584,13 +586,28 @@ def run_pipeline(shift="ca1", target_date=None):
 
         pkgs = trip_to_pkgs.get(code, set())
         orders_cnt = sum(pkg_to_valid_orders_cnt.get(p, 0) for p in pkgs)
+
+        # Lấy số kiện theo mục CẦN NHẬN (Cồng kềnh, Bao cần rã, Bao chuyển tiếp) của KTC Bình Định
+        w_drop = t.get("willDropOff") or {}
+        bulky = w_drop.get("numOfPkgBulky") or 0
+        bag_unload = w_drop.get("numOfPkg") or w_drop.get("numOfBag") or 0
+        bag_relay = w_drop.get("numOfPkgRelay") or w_drop.get("numOfRelay") or w_drop.get("numOfTransit") or 0
+
+        if w_drop and (bulky > 0 or bag_unload > 0 or bag_relay > 0):
+            dropoff_pkgs_cnt = bulky + bag_unload + bag_relay
+        else:
+            dropoff_pkgs_cnt = len(pkgs)
+
         truck_data.append({
             "code": code,
             "plate": plate if plate else "N/A",
             "route": rname,
             "eta": eta_str,
             "etd": etd_str,
-            "pkgs": len(pkgs),
+            "pkgs": dropoff_pkgs_cnt,
+            "bulky": bulky,
+            "bag_unload": bag_unload,
+            "bag_relay": bag_relay,
             "orders": orders_cnt,
             "note_shift": t.get("note_shift", "")
         })
@@ -666,13 +683,25 @@ def send_telegram_photo_and_trucks(shift_label, target_date, total_orders, bd_to
                 etd = tr['etd']
                 pkgs = tr['pkgs']
                 orders = tr['orders']
+                bulky = tr.get('bulky', 0)
+                bag_unload = tr.get('bag_unload', 0)
+                bag_relay = tr.get('bag_relay', 0)
                 total_truck_pkgs += pkgs
                 total_truck_orders += orders
+
+                details = []
+                if bulky > 0:
+                    details.append(f"Cồng kềnh: {bulky:,}")
+                if bag_unload > 0:
+                    details.append(f"Bao cần rã: {bag_unload:,}")
+                if bag_relay > 0:
+                    details.append(f"Bao chuyển tiếp: {bag_relay:,}")
+                detail_str = f" ({', '.join(details)})" if details else ""
 
                 note_label = f" ⚠️ <b>({tr['note_shift']})</b>" if tr.get('note_shift') else ""
                 lines.append(f"<b>{idx}. <code>{code}</code></b> ({route}) | <b>{plate}</b>{note_label}")
                 lines.append(f"   ⏱️ Dự kiến: Tới <b>{eta}</b> | Rời: <b>{etd}</b>")
-                lines.append(f"   📦 Chở về: <b>{pkgs:,} kiện</b> | <b>{orders:,} đơn</b>\n")
+                lines.append(f"   📦 Chở về: <b>{pkgs:,} kiện</b>{detail_str} | <b>{orders:,} đơn</b>\n")
 
             lines.append("━━━━━━━━━━━━━━━━━━━━")
             lines.append(f"🎯 <b>TỔNG CỘNG:</b> <b>{len(truck_data)} xe trục</b> | <b>{total_truck_pkgs:,} kiện</b> | <b>{total_truck_orders:,} đơn</b>")
