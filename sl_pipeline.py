@@ -524,6 +524,19 @@ def run_pipeline(shift="ca1", target_date=None):
     else:
         orders_rows = fetch_metabase_orders(packages)
         print(f"✅ Lấy thành công: {len(orders_rows)} đơn hàng từ Metabase.")
+        if len(packages) > 0 and len(orders_rows) == 0:
+            print("⚠️ [ERROR] Có kiện hàng nhưng Metabase trả về 0 đơn (Token Báo Cáo hết hạn)!")
+            msg_err = (
+                f"⚠️ <b>CẢNH BÁO BÁO CÁO SẢN LƯỢNG {shift_label.upper()} ({date_str}):</b>\n"
+                f"Hệ thống đã gom được <b>{len(valid_matched_trips)} xe trục ({len(packages):,} kiện)</b> nhưng không thể truy vấn số đơn từ Metabase do <b>Token GHN / Báo Cáo đã hết hạn!</b>\n\n"
+                f"👉 <b>Khắc phục:</b> Vui lòng mở trang <code>https://baocao.ghn.vn/</code> trên trình duyệt để tự động cập nhật Token mới và hệ thống sẽ xuất lại báo cáo ngay!"
+            )
+            try:
+                url_err = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+                requests.post(url_err, data={"chat_id": TELEGRAM_CHAT_ID, "text": msg_err, "parse_mode": "HTML"}, timeout=15)
+            except Exception as e_err:
+                print(f"[WARN] Không thể gửi cảnh báo token hết hạn: {e_err}")
+            return
 
     ma_to_ten, ten_to_tuyen = load_dictionaries(shift=shift_code)
     processed_orders, summary_routes, bc_orders = process_orders(orders_rows, ma_to_ten, ten_to_tuyen, shift=shift_code)
