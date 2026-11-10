@@ -717,13 +717,69 @@ def send_telegram_photo_and_trucks(shift_label, target_date, total_orders, bd_to
     except Exception as e:
         print(f"  ✗ Lỗi gửi danh sách xe trục Telegram: {e}")
 
+def pre_flight_token_check(shift_name="ca_sang"):
+    shift_label = "Ca Sáng (07:00)" if shift_name == "ca_sang" else "Ca Đêm (15:00)"
+    errors = []
+    
+    # 1. Tự động làm mới & kiểm tra Metabase JWT
+    try:
+        new_jwt = get_metabase_jwt(force_refresh=True)
+        if not new_jwt:
+            errors.append("Không thể lấy Token Báo Cáo Metabase (phiên baocao_session hết hạn).")
+    except Exception as e:
+        errors.append(f"Lỗi làm mới Metabase Báo Cáo: {e}")
+
+    # 2. Kiểm tra SSO Token
+    sso_tok = get_sso_token()
+    if not sso_tok:
+        errors.append("Không tìm thấy GHN SSO Token (cần cho quét lịch trình xe trục).")
+
+    # 3. Kiểm tra Coordinator Token
+    try:
+        ghn_tok = GHN_TOKEN_FILE.read_text(encoding="utf-8").strip() if GHN_TOKEN_FILE.exists() else ""
+        if ghn_tok:
+            import base64
+            part = ghn_tok.split('.')[1]
+            part += '=' * (-len(part) % 4)
+            pl = json.loads(base64.urlsafe_b64decode(part))
+            exp = pl.get("exp", 0)
+            now_sec = int(time.time())
+            rem_h = (exp - now_sec) / 3600
+            if rem_h <= 0:
+                errors.append(f"Token Điều Phối GHN đã hết hạn từ {datetime.fromtimestamp(exp, VN_TZ).strftime('%H:%M %d/%m')}!")
+            elif rem_h < 12:
+                errors.append(f"Token Điều Phối GHN chỉ còn {rem_h:.1f} giờ (sắp hết hạn lúc {datetime.fromtimestamp(exp, VN_TZ).strftime('%H:%M %d/%m')})!")
+    except Exception:
+        pass
+
+    if errors:
+        err_text = "\n".join([f"• {e}" for e in errors])
+        msg_alert = (
+            f"⚠️ <b>CẢNH BÁO SỚM TOKEN TRƯỚC {shift_label.upper()}:</b>\n"
+            f"<i>(Hệ thống kiểm tra tự động trước giờ xuất báo cáo 45 phút)</i>\n\n"
+            f"Phát hiện các cảnh báo sau:\n{err_text}\n\n"
+            f"👉 <b>Khắc phục:</b> Bạn chỉ cần mở trang <code>https://baocao.ghn.vn/</code> hoặc <code>https://nhanh.ghn.vn/</code> trên máy tính trong vòng 45 phút tới để hệ thống tự động đồng bộ trước khi đến giờ báo cáo chính thức!"
+        )
+        try:
+            url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+            requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": msg_alert, "parse_mode": "HTML"}, timeout=15)
+            print(f"⚠️ [PRE-FLIGHT] Đã gửi cảnh báo sớm trước {shift_label} lên Telegram!")
+        except Exception as e_send:
+            print(f"[WARN] Lỗi gửi cảnh báo pre-flight: {e_send}")
+    else:
+        print(f"✅ [PRE-FLIGHT] Kiểm tra trước {shift_label} thành công (Tokens hoàn toàn sẵn sàng & đã làm mới 12h)!")
+
 def run_sl_scheduler():
     print("⏰ SL Reporter Scheduler Thread running (Render 24/7)...")
-    print("   • Ca Sáng: Gửi cố định lúc 07:00 sáng hàng ngày")
-    print("   • Ca Đêm:  Gửi cố định lúc 15:00 chiều hàng ngày")
+    print("   • Ca Sáng: Gửi cố định lúc 07:00 sáng hàng ngày (Kiểm tra sớm lúc 06:15)")
+    print("   • Ca Đêm:  Gửi cố định lúc 15:00 chiều hàng ngày (Kiểm tra sớm lúc 14:15)")
+    print("   • Tự động làm mới Metabase JWT định kỳ mỗi 4 tiếng")
 
     last_run_day_sang = -1
     last_run_day_dem = -1
+    last_precheck_sang = -1
+    last_precheck_dem = -1
+    last_periodic_refresh_hour = -1
 
     while True:
         try:
@@ -732,12 +788,30 @@ def run_sl_scheduler():
             hour = now.hour
             minute = now.minute
 
-            # 07:00 -> Ca Sáng (chỉ kích hoạt trong 5 phút đầu 07:00 - 07:05)
+            # 1. Tự động làm mới Metabase JWT mỗi 4 tiếng (02:00, 06:00, 10:00, 14:00, 18:00, 22:00)
+            if hour % 4 == 2 and 0 <= minute <= 5 and last_periodic_refresh_hour != hour:
+                last_periodic_refresh_hour = hour
+                try:
+                    get_metabase_jwt(force_refresh=True)
+                except Exception as e_ref:
+                    print(f"[WARN] Lỗi định kỳ làm mới Metabase JWT: {e_ref}")
+
+            # 2. Kiểm tra sớm trước Ca Sáng (06:15 - trước ca 45 phút)
+            if hour == 6 and 15 <= minute <= 20 and last_precheck_sang != cur_day:
+                last_precheck_sang = cur_day
+                pre_flight_token_check(shift_name="ca_sang")
+
+            # 3. 07:00 -> Chạy báo cáo Ca Sáng (chỉ kích hoạt trong 5 phút đầu 07:00 - 07:05)
             if hour == 7 and 0 <= minute <= 5 and last_run_day_sang != cur_day:
                 last_run_day_sang = cur_day
                 run_pipeline(shift="ca_sang")
 
-            # 15:00 -> Ca Đêm (chỉ kích hoạt trong 5 phút đầu 15:00 - 15:05)
+            # 4. Kiểm tra sớm trước Ca Đêm (14:15 - trước ca 45 phút)
+            if hour == 14 and 15 <= minute <= 20 and last_precheck_dem != cur_day:
+                last_precheck_dem = cur_day
+                pre_flight_token_check(shift_name="ca_dem")
+
+            # 5. 15:00 -> Chạy báo cáo Ca Đêm (chỉ kích hoạt trong 5 phút đầu 15:00 - 15:05)
             if hour == 15 and 0 <= minute <= 5 and last_run_day_dem != cur_day:
                 last_run_day_dem = cur_day
                 run_pipeline(shift="ca_dem")
