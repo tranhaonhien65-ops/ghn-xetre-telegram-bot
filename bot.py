@@ -471,7 +471,7 @@ def ghn_alert_worker(config: dict):
     while True:
         BOT_STATUS["alert_worker_alive"] = True
         bot_token = config.get("BOT_TOKEN", "").strip()
-        group_id = config.get("GROUP_ID", -5311462943)
+        group_id = config.get("GROUP_ID", -1004334734205)
         poll_interval = config.get("POLL_INTERVAL_SECONDS", 60)
         try:
             threshold = config.get("DELAY_THRESHOLD_MINUTES", 1)

@@ -8,9 +8,18 @@ BOT_TOKEN_FILE = BASE_DIR / "bot_token.txt"
 STATE_FILE = BASE_DIR / "bot_state.json"
 CONFIG_FILE = BASE_DIR / "config.json"
 
+FALLBACK_BOT_TOKEN_B64 = "ODg3MzY3MzExMjpBQUVUVTh4N3c3cS1vUWlEWU4zd0x4dVFXTFZrbEJGSzU4MA=="
+
+def get_fallback_bot_token() -> str:
+    try:
+        import base64
+        return base64.b64decode(FALLBACK_BOT_TOKEN_B64).decode("utf-8").strip()
+    except Exception:
+        return ""
+
 DEFAULT_CONFIG = {
-    "BOT_TOKEN": os.environ.get("BOT_TOKEN", ""),
-    "GROUP_ID": int(os.environ.get("GROUP_ID", -5311462943)),
+    "BOT_TOKEN": os.environ.get("BOT_TOKEN", "") or get_fallback_bot_token(),
+    "GROUP_ID": int(os.environ.get("GROUP_ID", -1004334734205)),
     "POLL_INTERVAL_SECONDS": 60,
     "DELAY_THRESHOLD_MINUTES": 1,
     "SILENT_ALERTS": False,
@@ -40,6 +49,8 @@ def load_config():
                 print(f"[WARN] Error loading bot_token.txt: {e}")
         if os.environ.get("BOT_TOKEN"):
             cfg["BOT_TOKEN"] = os.environ.get("BOT_TOKEN").strip()
+        if not cfg.get("BOT_TOKEN"):
+            cfg["BOT_TOKEN"] = get_fallback_bot_token()
         _LIVE_CONFIG = cfg
     return _LIVE_CONFIG
 
