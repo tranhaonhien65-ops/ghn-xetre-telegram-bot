@@ -296,13 +296,28 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
         rollover_start = shift_std_start - timedelta(hours=36) # Nhận diện cả các xe trễ từ các ca trước (tối đa 36 tiếng)
 
     def get_origin_location(code):
+        # 1. Tra cứu trực tiếp từ TMS detail API (lộ trình routes[0] là kho xuất phát đầu tiên)
+        url_detail = f"https://inside-prd-api.ghn.vn/tms/v1/transportation/detail?code={code}&status=SEARCH&locationId=20335000&locationType=GHN_HUB"
+        try:
+            r = requests.get(url_detail, headers=headers, timeout=8)
+            d = r.json().get("data", [{}])[0]
+            routes = d.get("routes", [])
+            if routes:
+                orig_name = routes[0].get("locationName", "")
+                if orig_name:
+                    return orig_name
+        except Exception:
+            pass
+
+        # 2. Fallback qua TMS history (sắp xếp actionTime để lấy trạm xuất phát đầu tiên)
         q_param = json.dumps({"transportationCode": code})
-        url_hist = f"https://inside-prd-api.ghn.vn/lms/v1/tms-history?q={requests.utils.quote(q_param)}&offset=0&limit=1&locationId=20335000&locationType=GHN_HUB&source=INSIDE_WEB_APP/ktc-van-tai/transport/detail"
+        url_hist = f"https://inside-prd-api.ghn.vn/lms/v1/tms-history?q={requests.utils.quote(q_param)}&offset=0&limit=50&locationId=20335000&locationType=GHN_HUB&source=INSIDE_WEB_APP/ktc-van-tai/transport/detail"
         try:
             r = requests.get(url_hist, headers=headers, timeout=8)
-            d_hist = r.json()
-            if d_hist.get("data"):
-                return d_hist["data"][0].get("locationName", "")
+            d_hist = r.json().get("data", [])
+            if d_hist:
+                d_hist.sort(key=lambda x: x.get("actionTime") or "")
+                return d_hist[0].get("locationName", "")
         except Exception:
             pass
         return ""
@@ -373,11 +388,11 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
                     is_linehaul = True
                 else:
                     origin = get_origin_location(code).upper()
-                    if any(k in origin for k in ["HƯNG YÊN", "HUNG YEN", "HÀ NỘI", "HA NOI", "HỒ CHÍ MINH", "HO CHI MINH", "HCM", "TÂN BÌNH", "BÌNH TÂN"]):
+                    if any(k in origin for k in ["HƯNG YÊN", "HUNG YEN", "HÀ NỘI", "HA NOI", "HỒ CHÍ MINH", "HO CHI MINH", "HCM", "TÂN BÌNH", "BÌNH TÂN", "LONG AN", "ĐỨC HÒA", "B2B"]):
                         is_linehaul = True
                         if any(k in origin for k in ["HƯNG YÊN", "HUNG YEN"]):
                             t["routeScheduleName"] = "HY_BĐ_TĂNG CƯỜNG"
-                        elif any(k in origin for k in ["HỒ CHÍ MINH", "HO CHI MINH", "HCM", "TÂN BÌNH", "BÌNH TÂN"]):
+                        elif any(k in origin for k in ["HỒ CHÍ MINH", "HO CHI MINH", "HCM", "TÂN BÌNH", "BÌNH TÂN", "LONG AN", "ĐỨC HÒA", "B2B"]):
                             t["routeScheduleName"] = "HCM_BĐ_TĂNG CƯỜNG"
                         elif any(k in origin for k in ["HÀ NỘI", "HA NOI"]):
                             t["routeScheduleName"] = "HN_BĐ_TĂNG CƯỜNG"

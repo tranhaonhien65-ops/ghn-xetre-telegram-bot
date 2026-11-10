@@ -1377,6 +1377,9 @@
     "routeScheduleName": "BD_PY_04",
     "typeOps": "sorting",
     "vehiclePlate": "77H-05918",
+    "willDropOff": {
+      "numOfPkg": 2
+    },
     "tab": "Sắp đến kho"
   },
   "E261109Z0TFT3PI": {
@@ -1652,7 +1655,7 @@
     "excludeSortGroupCodes": null,
     "expectedArrivalTime": "2026-11-10T14:00:00Z",
     "includeSortGroupCodes": null,
-    "numberOfRemainingStops": 3,
+    "numberOfRemainingStops": 2,
     "partnerTransportationCode": "E2611103LPZGDZJ",
     "routeScheduleName": "",
     "typeOps": "sorting",
@@ -2088,6 +2091,9 @@
     "routeScheduleName": "HY_BĐ_KH_HCM01_01_01",
     "typeOps": "sorting",
     "vehiclePlate": "29E-12759",
+    "willDropOff": {
+      "numOfPkgBulky": 3
+    },
     "tab": "Sắp đến kho"
   },
   "E261110FCBWIADJ": {
