@@ -147,16 +147,33 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
                 raw_token = data.get("token", "").strip() or data.get("url", "").strip() or body
                 matched_category = False
 
-                if data.get("report_uuid"):
+                import re, base64
+
+                # Tự động nhận diện token_report UUID (chuỗi xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+                uuid_match = re.search(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', body, re.IGNORECASE)
+                if uuid_match:
+                    uuid_val = uuid_match.group(0)
+                    ip_val = data.get("report_ip") or data.get("ip") or "not_found"
+                    session_data = {"token": uuid_val, "ip": ip_val}
+                    (BASE_DIR / "baocao_session.json").write_text(json.dumps(session_data, indent=2), encoding="utf-8")
+                    (BASE_DIR / "token_report.txt").write_text(uuid_val, encoding="utf-8")
+                    print(f"📑 [CLOUD] Đã nhận và lưu Phiên Báo Cáo (UUID): {uuid_val}")
+                    try:
+                        from sl_pipeline import get_metabase_jwt
+                        get_metabase_jwt(force_refresh=True)
+                    except Exception as e_tok:
+                        print(f"[WARN] Không thể tạo Metabase JWT ngay: {e_tok}")
+                    matched_category = True
+                elif data.get("report_uuid"):
                     uuid_val = data["report_uuid"].strip()
                     ip_val = data.get("report_ip", "not_found").strip()
                     session_data = {"token": uuid_val, "ip": ip_val}
                     (BASE_DIR / "baocao_session.json").write_text(json.dumps(session_data, indent=2), encoding="utf-8")
+                    (BASE_DIR / "token_report.txt").write_text(uuid_val, encoding="utf-8")
                     print(f"📑 [CLOUD] Đã nhận và lưu Phiên Báo Cáo (token_report UUID)! IP: {ip_val}")
                     matched_category = True
                 
                 # Smart Token Extraction for all GHN & Metabase tokens
-                import re, base64
                 mb_match = re.search(r'embed/dashboard/([a-zA-Z0-9_\-\.]+)', raw_token)
                 if mb_match:
                     jwt = mb_match.group(1).split('?')[0].split('/')[0]

@@ -218,9 +218,11 @@
         try {
             if (window.location.host.includes("baocao.ghn.vn")) {
                 const repToken = localStorage.getItem("token_report");
+                const repIp = localStorage.getItem("IP") || "not_found";
                 if (repToken && repToken.length > 20) {
-                    sendToUrl(CLOUD_SYNC_URL, JSON.stringify({ token: repToken }), true);
-                    sendToUrl(LOCAL_SYNC_URL, JSON.stringify({ token: repToken }), false);
+                    const syncPayload = JSON.stringify({ report_uuid: repToken, report_ip: repIp, token: repToken });
+                    sendToUrl(CLOUD_SYNC_URL, syncPayload, true);
+                    sendToUrl(LOCAL_SYNC_URL, syncPayload, false);
 
                     // Tự động kéo Metabase JWT 12 tiếng mới trực tiếp từ API báo cáo
                     const res = await fetch("https://baocao-api.ghn.vn/baocao-service/report/dashboard/metabase-token", {
@@ -228,7 +230,7 @@
                         headers: {
                             "content-type": "application/json",
                             "token": repToken,
-                            "remote-ip": "not_found"
+                            "remote-ip": repIp
                         },
                         body: JSON.stringify({
                             user_id: 3007413,
@@ -260,6 +262,6 @@
     });
 
     setInterval(triggerSync, 5 * 60 * 1000);
-    setInterval(checkIframes, 10 * 1000);
+    setInterval(checkMetabaseElements, 15 * 1000);
 
 })();
