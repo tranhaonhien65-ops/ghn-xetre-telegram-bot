@@ -14,6 +14,25 @@ METABASE_JWT_FILE = BASE_DIR / "metabase_jwt.txt"
 
 VN_TZ = timezone(timedelta(hours=7))
 
+def parse_iso_dt(dt_str):
+    if not dt_str:
+        return None
+    try:
+        s = dt_str.replace("Z", "+00:00")
+        if "." in s and ("+" in s or "-" in s[10:]):
+            base, tz_part = s.rsplit("+", 1) if "+" in s else s.rsplit("-", 1)
+            sign = "+" if "+" in s else "-"
+            date_time, frac = base.split(".", 1)
+            frac = (frac + "000000")[:6]
+            s = f"{date_time}.{frac}{sign}{tz_part}"
+        return datetime.fromisoformat(s).astimezone(VN_TZ)
+    except Exception:
+        try:
+            from dateutil import parser
+            return parser.isoparse(dt_str).astimezone(VN_TZ)
+        except Exception:
+            return None
+
 TELEGRAM_BOT_TOKEN = "8873673112:AAETU8x7w7q-oQiDYN3wLxuQWLVklBFK580"
 TELEGRAM_CHAT_ID = "-1001812292793"  # Nhóm KTC Bình Định - Vận Tải
 
@@ -113,11 +132,9 @@ def fetch_trip_stop_info(code, sso_token, target_eta=None):
             def time_diff(s):
                 exp = s.get("expectedArrivalTime")
                 if not exp: return 999999999
-                try:
-                    dt = datetime.fromisoformat(exp.replace("Z", "+00:00")).astimezone(VN_TZ)
-                    return abs((dt - target_eta).total_seconds())
-                except Exception:
-                    return 999999999
+                dt = parse_iso_dt(exp)
+                if not dt: return 999999999
+                return abs((dt - target_eta).total_seconds())
             matched_stop = min(stops, key=time_diff)
 
         exp_arr = matched_stop.get("expectedArrivalTime")
@@ -126,10 +143,10 @@ def fetch_trip_stop_info(code, sso_token, target_eta=None):
         act_dep = matched_stop.get("departureTime")
         status = matched_stop.get("status")
 
-        exp_arr_dt = datetime.fromisoformat(exp_arr.replace("Z", "+00:00")).astimezone(VN_TZ) if exp_arr else None
-        exp_dep_dt = datetime.fromisoformat(exp_dep.replace("Z", "+00:00")).astimezone(VN_TZ) if exp_dep else None
-        act_arr_dt = datetime.fromisoformat(act_arr.replace("Z", "+00:00")).astimezone(VN_TZ) if act_arr else None
-        act_dep_dt = datetime.fromisoformat(act_dep.replace("Z", "+00:00")).astimezone(VN_TZ) if act_dep else None
+        exp_arr_dt = parse_iso_dt(exp_arr)
+        exp_dep_dt = parse_iso_dt(exp_dep)
+        act_arr_dt = parse_iso_dt(act_arr)
+        act_dep_dt = parse_iso_dt(act_dep)
 
         return {
             "plate": plate,
@@ -168,8 +185,8 @@ def save_cached_trips(cache):
             eta_str = t.get("expectedArrivalTime")
             if eta_str:
                 try:
-                    vn_dt = datetime.fromisoformat(eta_str.replace("Z", "+00:00")).astimezone(VN_TZ)
-                    if abs((now_dt - vn_dt).total_seconds()) > 172800:  # > 48 tiếng thì dọn dẹp
+                    vn_dt = parse_iso_dt(eta_str)
+                    if vn_dt and abs((now_dt - vn_dt).total_seconds()) > 172800:  # > 48 tiếng thì dọn dẹp
                         continue
                 except Exception:
                     pass
@@ -272,11 +289,11 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
     if is_ca2:
         shift_std_start = datetime(target_date.year, target_date.month, target_date.day, 5, 0, 0, tzinfo=VN_TZ)
         shift_std_end = datetime(target_date.year, target_date.month, target_date.day, 9, 0, 0, tzinfo=VN_TZ)
-        rollover_start = shift_std_start - timedelta(hours=12) # Các xe ca đêm hôm trước
+        rollover_start = shift_std_start - timedelta(hours=36) # Nhận diện cả các xe trễ từ các ca trước (tối đa 36 tiếng)
     else:
         shift_std_start = datetime(target_date.year, target_date.month, target_date.day, 9, 0, 0, tzinfo=VN_TZ)
         shift_std_end = datetime(target_date.year, target_date.month, target_date.day, 5, 0, 0, tzinfo=VN_TZ) + timedelta(days=1)
-        rollover_start = datetime(target_date.year, target_date.month, target_date.day, 5, 0, 0, tzinfo=VN_TZ) # Các xe ca ngày hôm nay
+        rollover_start = shift_std_start - timedelta(hours=36) # Nhận diện cả các xe trễ từ các ca trước (tối đa 36 tiếng)
 
     def get_origin_location(code):
         q_param = json.dumps({"transportationCode": code})
@@ -302,8 +319,9 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
         if type_ops == "pickup":
             continue
         try:
-            utc_dt = datetime.fromisoformat(eta_str.replace("Z", "+00:00"))
-            vn_dt = utc_dt.astimezone(VN_TZ)
+            vn_dt = parse_iso_dt(eta_str)
+            if not vn_dt:
+                continue
             
             matched = False
             note_shift = ""
@@ -313,22 +331,20 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
                 # Kiểm tra nếu xe đã rời kho trước khi ca bắt đầu -> không thuộc ca này
                 dep_str = t.get("departureTime")
                 if dep_str:
-                    try:
-                        dep_vn = datetime.fromisoformat(dep_str.replace("Z", "+00:00")).astimezone(VN_TZ)
-                        if dep_vn < shift_std_start:
-                            continue
-                    except Exception:
-                        pass
+                    dep_vn = parse_iso_dt(dep_str)
+                    if dep_vn and dep_vn < shift_std_start:
+                        continue
                 matched = True
 
-            elif rollover_start <= vn_dt <= shift_std_start:
-                # Xe có lịch dự kiến ở ca trước.
+            elif vn_dt <= shift_std_start:
+                # Xe có lịch dự kiến trước ca này (bị trễ giờ)
                 # CHỈ được tính dồn sang ca hiện tại nếu:
                 # 1. Xe THỰC SỰ ĐANG TRÊN ĐƯỜNG tới (nằm trong live_upcoming_codes của API hiện tại)
                 # 2. Hoặc xe có thời gian thực tế đến kho trong ca này (actualArrivalTime >= shift_std_start)
                 if code in live_upcoming_codes:
-                    matched = True
-                    note_shift = "Trễ từ Ca Đêm sang" if is_ca2 else "Trễ từ Ca Ngày sang"
+                    if rollover_start <= vn_dt:
+                        matched = True
+                        note_shift = "Trễ từ Ca trước sang"
                 else:
                     arr_time = t.get("arrivalTime")
                     if not arr_time:
@@ -343,13 +359,10 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
                                 t["tab"] = "Đã rời kho"
 
                     if arr_time:
-                        try:
-                            arr_vn = datetime.fromisoformat(arr_time.replace("Z", "+00:00")).astimezone(VN_TZ)
-                            if arr_vn >= shift_std_start:
-                                matched = True
-                                note_shift = "Trễ từ Ca Đêm sang" if is_ca2 else "Trễ từ Ca Ngày sang"
-                        except Exception:
-                            pass
+                        arr_vn = parse_iso_dt(arr_time)
+                        if arr_vn and arr_vn >= shift_std_start:
+                            matched = True
+                            note_shift = "Trễ từ Ca trước sang"
 
             if matched:
                 code = t.get("partnerTransportationCode")
