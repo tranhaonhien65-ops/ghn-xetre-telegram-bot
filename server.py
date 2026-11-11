@@ -54,6 +54,36 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        if self.path == "/diag":
+            import socket, urllib.request
+            diag = {}
+            try:
+                diag["render_ip"] = urllib.request.urlopen("https://api.ipify.org", timeout=5).read().decode()
+            except Exception as e:
+                diag["render_ip_err"] = str(e)
+            try:
+                diag["dns_truck"] = socket.gethostbyname("truck-gw.ghn.vn")
+            except Exception as e:
+                diag["dns_truck_err"] = str(e)
+            try:
+                s = socket.create_connection(("truck-gw.ghn.vn", 443), timeout=5)
+                s.close()
+                diag["tcp_truck"] = "connected"
+            except Exception as e:
+                diag["tcp_truck_err"] = str(e)
+            try:
+                s2 = socket.create_connection(("baocao-api.ghn.vn", 443), timeout=5)
+                s2.close()
+                diag["tcp_baocao"] = "connected"
+            except Exception as e:
+                diag["tcp_baocao_err"] = str(e)
+            self.send_response(200)
+            self._send_cors()
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(diag, indent=2).encode())
+            return
+
         self.send_response(200)
         self._send_cors()
         self.send_header("Content-Type", "application/json; charset=utf-8")
