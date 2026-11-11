@@ -10,6 +10,47 @@ from config import get_ghn_token
 API_URL = "https://truck-gw.ghn.vn/api/v1/staff/trip/find_trip"
 VN_TZ = timezone(timedelta(hours=7))
 
+_ACTIVE_PROXY = None
+FALLBACK_PROXIES = [
+    "4.144.146.21:80",
+    "8.219.94.23:7890",
+    "185.194.121.232:8085"
+]
+
+def make_request_with_fallback(req, timeout=6):
+    global _ACTIVE_PROXY
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    if _ACTIVE_PROXY:
+        try:
+            handler = urllib.request.ProxyHandler({"https": f"http://{_ACTIVE_PROXY}"})
+            opener = urllib.request.build_opener(handler)
+            return opener.open(req, timeout=timeout)
+        except Exception as e:
+            _ACTIVE_PROXY = None
+
+    try:
+        return urllib.request.urlopen(req, context=ctx, timeout=timeout)
+    except (urllib.error.URLError, TimeoutError, OSError) as net_err:
+        if isinstance(net_err, urllib.error.HTTPError):
+            raise net_err
+        for p in FALLBACK_PROXIES:
+            try:
+                handler = urllib.request.ProxyHandler({"https": f"http://{p}"})
+                opener = urllib.request.build_opener(handler)
+                resp = opener.open(req, timeout=timeout)
+                _ACTIVE_PROXY = p
+                print(f"🛡️ [ROUTING] Kết nối qua Proxy dự phòng ({p}) thành công!")
+                return resp
+            except urllib.error.HTTPError as he:
+                _ACTIVE_PROXY = p
+                raise he
+            except Exception:
+                continue
+        raise net_err
+
 def fetch_trips_page(token: str, page: int = 1, retries: int = 2) -> Tuple[Optional[dict], Optional[str], bool]:
     """
     Fetches a single page of active trips from GHN API with 7-day date filter (identical to web UI).
@@ -35,17 +76,13 @@ def fetch_trips_page(token: str, page: int = 1, retries: int = 2) -> Tuple[Optio
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)"
     }
     
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    
     for attempt in range(retries):
         current_token = get_ghn_token()
         headers["authorization"] = f"Bearer {current_token}"
         req = urllib.request.Request(API_URL, data=data_bytes, headers=headers, method="PATCH")
         
         try:
-            with urllib.request.urlopen(req, context=ctx, timeout=6) as response:
+            with make_request_with_fallback(req, timeout=6) as response:
                 res_body = response.read().decode("utf-8")
                 return json.loads(res_body), None, False
         except urllib.error.HTTPError as e:
