@@ -490,10 +490,13 @@ def ghn_alert_worker(config: dict):
                 
                 # ONLY notify Telegram group if token is genuinely expired for 3 consecutive polls (3 minutes)
                 if is_expired and consecutive_auth_errors >= 3 and not token_error_notified:
-                    send_telegram_message(
-                        bot_token, group_id,
-                        f"⚠️ <b>CẢNH BÁO MẤT KẾT NỐI GHN:</b> {err}\n\n💡 Vui lòng mở lại trang GHN trên trình duyệt để tự động đồng bộ Token mới."
+                    msg_bot_err = (
+                        f"🚨 <b>SOS! CẤP BÁO CẤP BÁO!</b> 📢\n"
+                        f"@Nhiên <b>Sếp ơi bị lỗi gì rồi , hãy giúp đỡ tôi !</b> 🥺🆘\n\n"
+                        f"Token GHN (Báo xe trễ) của em bị hết hạn rồi ạ (<code>{err}</code>). Em không soi được xe trễ nữa nè! 🚐💨\n\n"
+                        f"👉 Sếp mở trang <code>https://nhanh.ghn.vn/</code> trên máy tính 1 giây để nạp lại năng lượng cho em tiếp tục canh xe nhen sếp iu! 🥰✨"
                     )
+                    send_telegram_message(bot_token, group_id, msg_bot_err)
                     token_error_notified = True
             else:
                 consecutive_auth_errors = 0
