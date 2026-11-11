@@ -14,13 +14,14 @@
     "trucks": 10
   },
   "precheck_sang": {
+    "date": "2026-11-12",
+    "status": "completed",
+    "updated_at": "2026-11-12 06:15:00"
+  },
+  "alert_sent_precheck_sang_precheck": "2026-11-12",
+  "precheck_dem": {
     "date": "2026-11-11",
     "status": "completed",
-    "updated_at": "2026-11-11 06:15:00"
-  },
-  "precheck_dem": {
-    "date": "2026-11-10",
-    "status": "completed",
-    "updated_at": "2026-11-10 14:15:00"
+    "updated_at": "2026-11-11 14:15:00"
   }
 }
