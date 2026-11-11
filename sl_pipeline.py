@@ -36,6 +36,8 @@ def is_already_run_today(shift_key, today_str):
         return item == today_str
     if isinstance(item, dict):
         if item.get("date") == today_str and item.get("status") == "completed":
+            if item.get("orders") == 0 and item.get("trucks") == 0:
+                return False
             return True
         if item.get("date") == today_str and item.get("status") == "running":
             started_at = item.get("started_at", 0)
@@ -473,9 +475,9 @@ def extract_packages_for_trips(trips_list, sso_token):
             q_param = json.dumps({"transportationCode": code})
             url = f"https://inside-prd-api.ghn.vn/lms/v1/tms-history?q={requests.utils.quote(q_param)}&offset={offset}&limit={limit}&locationId=20335000&locationType=GHN_HUB&source=INSIDE_WEB_APP/ktc-van-tai/transport/detail"
             try:
-                r = requests.get(url, headers=headers, timeout=8)
+                r = requests.get(url, headers=headers, timeout=15)
                 if r.status_code == 401 or "TOKEN_NOT_ALIVE" in r.text or "UNAUTHORIZED" in r.text:
-                    print("⚠️ [ERROR] SSO Token đã chết (TOKEN_NOT_ALIVE) khi gọi TMS history!")
+                    print(f"⚠️ [ERROR] SSO Token đã chết khi gọi TMS history cho {code}!")
                     raise PermissionError("SSO Token hết hạn (TOKEN_NOT_ALIVE)")
                 data = r.json().get("data", [])
                 if not data:
@@ -484,7 +486,10 @@ def extract_packages_for_trips(trips_list, sso_token):
                 if len(data) < limit:
                     break
                 offset += limit
-            except Exception:
+            except PermissionError:
+                raise
+            except Exception as e_hist:
+                print(f"[WARN] Lỗi tải TMS history cho {code}: {e_hist}")
                 break
 
         if not all_events:
@@ -627,6 +632,10 @@ def run_pipeline(shift="ca1", target_date=None, force=False):
 
         if not packages or not valid_matched_trips:
             print("⚠️ Không có kiện hàng / chuyến xe nào hợp lệ trong ca này.")
+            if len(matched_trips) > 0:
+                print("⚠️ Có chuyến xe nhưng không gom được kiện hàng hợp lệ, có thể do lỗi mạng tải TMS history. Thử lại sau.")
+                mark_sl_state(shift_key, today_str, status="error_empty_pkgs")
+                return
             orders_rows = []
         else:
             orders_rows = fetch_metabase_orders(packages)
