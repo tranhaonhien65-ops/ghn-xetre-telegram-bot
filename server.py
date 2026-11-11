@@ -152,6 +152,51 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(res, ensure_ascii=False, indent=2).encode("utf-8"))
 
     def do_POST(self):
+        if self.path in ("/push_trips", "/trips"):
+            try:
+                content_len = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(content_len).decode("utf-8")
+                data = json.loads(body)
+                trips = data.get("trips", [])
+                if isinstance(trips, list) and len(trips) > 0:
+                    from bot import BOT_STATUS
+                    from analyzer import find_all_delayed_trips
+                    from notifier import filter_new_or_escalated_alerts, format_single_trip_alert, send_telegram_message
+                    from config import load_config
+
+                    cfg = load_config()
+                    bot_token = cfg.get("BOT_TOKEN", "").strip()
+                    group_id = cfg.get("GROUP_ID", -1004334734205)
+                    threshold = cfg.get("DELAY_THRESHOLD_MINUTES", 1)
+
+                    BOT_STATUS["total_active_trips"] = len(trips)
+                    BOT_STATUS["latest_trips"] = trips
+                    BOT_STATUS["last_scan_time"] = datetime.now(VN_TZ).strftime("%H:%M:%S %d/%m/%Y")
+                    BOT_STATUS["last_scan_status"] = f"Đồng bộ qua Browser Relay ({len(trips)} xe)"
+                    BOT_STATUS["last_error"] = None
+                    BOT_STATUS["consecutive_auth_errors"] = 0
+
+                    delayed = find_all_delayed_trips(trips, threshold_minutes=threshold)
+                    BOT_STATUS["delayed_trips_count"] = len(delayed)
+                    BOT_STATUS["latest_delayed"] = delayed
+
+                    to_alert = filter_new_or_escalated_alerts(delayed, update_interval_seconds=600)
+                    print(f"[{datetime.now(VN_TZ).strftime('%H:%M:%S')}] 🌐 [RELAY] Nhận {len(trips)} chuyến từ Browser | Xe trễ: {len(delayed)} | Cảnh báo: {len(to_alert)}")
+
+                    for d in to_alert:
+                        alert_msg = format_single_trip_alert(d)
+                        send_telegram_message(bot_token, group_id, alert_msg)
+                        time.sleep(1)
+
+                    self.send_response(200)
+                    self._send_cors()
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"status": "success", "active": len(trips), "delayed": len(delayed), "alerts": len(to_alert)}).encode("utf-8"))
+                    return
+            except Exception as e:
+                print(f"[ERROR] /push_trips error: {e}")
+
         if self.path in ("/update_bot_token", "/bot_token"):
             try:
                 content_len = int(self.headers.get("Content-Length", 0))

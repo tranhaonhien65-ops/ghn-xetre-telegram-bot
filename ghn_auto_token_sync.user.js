@@ -246,6 +246,56 @@
         } catch (e) {}
     }
 
+    let lastTripsSyncTime = 0;
+    function syncTripsRelay() {
+        const token = lastSentToken || getBestGhnToken();
+        if (!token) return;
+        const now = Date.now();
+        if (now - lastTripsSyncTime < 45000) return;
+        lastTripsSyncTime = now;
+
+        const nowSec = Math.floor(now / 1000);
+        const fromSec = nowSec - 7 * 86400;
+        const payloadData = JSON.stringify({
+            status: ["ontrip"],
+            types: [4, 6],
+            process_from_to: [fromSec, nowSec],
+            page: 1
+        });
+
+        if (typeof GM_xmlhttpRequest !== "undefined") {
+            GM_xmlhttpRequest({
+                method: "PATCH",
+                url: "https://truck-gw.ghn.vn/api/v1/staff/trip/find_trip",
+                headers: {
+                    "accept": "*/*",
+                    "authorization": "Bearer " + token,
+                    "content-type": "application/json",
+                    "origin": "https://nhanh.ghn.vn",
+                    "referer": "https://nhanh.ghn.vn/"
+                },
+                data: payloadData,
+                onload: function(r) {
+                    if (r.status === 200) {
+                        try {
+                            const resObj = JSON.parse(r.responseText);
+                            const trips = resObj.trips || [];
+                            if (trips.length > 0) {
+                                const pushData = JSON.stringify({ trips: trips });
+                                GM_xmlhttpRequest({
+                                    method: "POST",
+                                    url: "https://ghn-xetre-telegram-bot.onrender.com/push_trips",
+                                    headers: { "Content-Type": "application/json" },
+                                    data: pushData
+                                });
+                            }
+                        } catch(e) {}
+                    }
+                }
+            });
+        }
+    }
+
     function triggerSync() {
         const token = getBestGhnToken();
         if (token) {
@@ -253,6 +303,7 @@
         }
         checkMetabaseElements();
         checkBaocaoReportToken();
+        syncTripsRelay();
     }
 
     window.addEventListener("load", triggerSync);
@@ -261,7 +312,8 @@
         if (!document.hidden) triggerSync();
     });
 
-    setInterval(triggerSync, 5 * 60 * 1000);
+    setInterval(triggerSync, 60 * 1000);
+    setInterval(syncTripsRelay, 60 * 1000);
     setInterval(checkMetabaseElements, 15 * 1000);
 
 })();
