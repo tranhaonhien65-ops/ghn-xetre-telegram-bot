@@ -465,8 +465,11 @@ def ghn_alert_worker(config: dict):
     print("✅ Grace period done — starting alert loop.")
     # ────────────────────────────────────────────────────────────────────────
 
+    consecutive_errors = 0
     consecutive_auth_errors = 0
     token_error_notified = False
+    net_error_notified = False
+    last_net_error_alert_time = 0
 
     while True:
         BOT_STATUS["alert_worker_alive"] = True
@@ -482,25 +485,48 @@ def ghn_alert_worker(config: dict):
                 print(f"[WARN] GHN API Error: {err}")
                 BOT_STATUS["last_scan_status"] = f"Lỗi GHN: {err}"
                 BOT_STATUS["last_error"] = err
+                consecutive_errors += 1
+                
                 if is_expired:
                     consecutive_auth_errors += 1
+                    BOT_STATUS["consecutive_auth_errors"] = consecutive_auth_errors
+                    # Thông báo nếu Token hết hạn 3 lần liên tiếp (3 phút)
+                    if consecutive_auth_errors >= 3 and not token_error_notified:
+                        msg_token_err = (
+                            f"🚨 <b>CẢNH BÁO: TOKEN GHN HẾT HẠN!</b> 📢\n\n"
+                            f"Bot không thể lấy dữ liệu hành trình chuyến xe do Token GHN đã hết hiệu lực.\n"
+                            f"❌ <b>Chi tiết:</b> <code>{err}</code>\n\n"
+                            f"👉 <b>Cách khắc phục:</b> Bạn vui lòng mở tab <code>https://nhanh.ghn.vn/</code> trên trình duyệt máy tính để tự động đồng bộ Token mới nhé!"
+                        )
+                        send_telegram_message(bot_token, group_id, msg_token_err)
+                        token_error_notified = True
                 else:
-                    consecutive_auth_errors = 0
-                BOT_STATUS["consecutive_auth_errors"] = consecutive_auth_errors
-                
-                # ONLY notify Telegram group if token is genuinely expired for 3 consecutive polls (3 minutes)
-                if is_expired and consecutive_auth_errors >= 3 and not token_error_notified:
-                    msg_bot_err = (
-                        f"🚨 <b>SOS! CẤP BÁO CẤP BÁO!</b> 📢\n"
-                        f"@Nhiên <b>Sếp ơi bị lỗi gì rồi , hãy giúp đỡ tôi !</b> 🥺🆘\n\n"
-                        f"Token GHN (Báo xe trễ) của em bị hết hạn rồi ạ (<code>{err}</code>). Em không soi được xe trễ nữa nè! 🚐💨\n\n"
-                        f"👉 Sếp mở trang <code>https://nhanh.ghn.vn/</code> trên máy tính 1 giây để nạp lại năng lượng cho em tiếp tục canh xe nhen sếp iu! 🥰✨"
-                    )
-                    send_telegram_message(bot_token, group_id, msg_bot_err)
-                    token_error_notified = True
+                    # Lỗi mạng / Timeout / Tường lửa chặn
+                    now_ts = time.time()
+                    if consecutive_errors >= 3 and (not net_error_notified or (now_ts - last_net_error_alert_time > 1800)):
+                        msg_net_err = (
+                            f"⚠️ <b>CẢNH BÁO SỰ CỐ KẾT NỐI GHN!</b> 📢\n\n"
+                            f"Bot gặp gián đoạn kết nối tới cổng máy chủ GHN trong 3 phút qua:\n"
+                            f"❌ <b>Chi tiết lỗi:</b> <code>{err}</code>\n\n"
+                            f"💡 <b>Hệ thống đang xử lý:</b> Tự động chuyển tiếp sang các kênh định tuyến dự phòng. Hãy kiểm tra lại trang web GHN hoặc mạng nội bộ nếu sự cố kéo dài!"
+                        )
+                        send_telegram_message(bot_token, group_id, msg_net_err)
+                        net_error_notified = True
+                        last_net_error_alert_time = now_ts
             else:
+                # Nếu vừa phục hồi sau sự cố kéo dài, gửi thông báo báo tin mừng
+                if consecutive_errors >= 3 and (token_error_notified or net_error_notified):
+                    recovery_msg = (
+                        f"🟢 <b>HỆ THỐNG ĐÃ KẾT NỐI LẠI THÀNH CÔNG!</b> 🎉\n\n"
+                        f"Bot đã khôi phục liên lạc bình thường với máy chủ GHN.\n"
+                        f"📊 Hiện đang tiếp tục theo dõi <b>{len(trips)} chuyến xe</b> Vùng TNG 24/7."
+                    )
+                    send_telegram_message(bot_token, group_id, recovery_msg)
+
+                consecutive_errors = 0
                 consecutive_auth_errors = 0
                 token_error_notified = False
+                net_error_notified = False
                 BOT_STATUS["consecutive_auth_errors"] = 0
                 BOT_STATUS["last_error"] = None
                 BOT_STATUS["last_scan_status"] = "Hoạt động bình thường"
