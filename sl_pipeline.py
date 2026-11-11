@@ -726,6 +726,9 @@ def run_pipeline(shift="ca1", target_date=None, force=False):
 
         ma_to_ten, ten_to_tuyen = load_dictionaries(shift=shift_code)
         processed_orders, summary_routes, bc_orders = process_orders(orders_rows, ma_to_ten, ten_to_tuyen, shift=shift_code)
+        del orders_rows
+        import gc
+        gc.collect()
 
         valid_route_names = set(s['tuyen'] for s in summary_routes)
         pkg_to_valid_orders_cnt = {}
@@ -808,6 +811,8 @@ def run_pipeline(shift="ca1", target_date=None, force=False):
         # 2. Xuất file Excel nhẹ và gửi tiếp file Excel
         out_excel = BASE_DIR / f"SL_BD_{shift_code}.xlsx"
         generate_report_file(processed_orders, summary_routes, bc_orders, shift=shift_code, out_file=out_excel)
+        del processed_orders, summary_routes, bc_orders
+        gc.collect()
 
         if out_excel.exists():
             try:

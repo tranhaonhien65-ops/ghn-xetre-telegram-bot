@@ -368,5 +368,8 @@ def generate_report_file(orders_data, route_summary, bc_counts, shift="ca1", out
         ])
 
     wb.save(str(out_file))
+    del wb
+    import gc
+    gc.collect()
     print(f"✅ Generated {out_file} successfully! Total orders: {len(orders_data)} (Table 1: {total_table_1}, BD: {total_bd}, PY: {total_py})")
     return total_table_1, total_bd, total_py

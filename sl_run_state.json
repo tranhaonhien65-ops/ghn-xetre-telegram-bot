@@ -6,9 +6,12 @@
     "note": "Ca Sáng 11/11/2026 đã gửi thành công"
   },
   "ca_dem": {
-    "date": "2026-11-10",
+    "date": "2026-11-11",
     "status": "completed",
-    "updated_at": "2026-11-10 15:02:00"
+    "updated_at": "2026-11-11 15:37:21",
+    "started_at": 1794386241.0695,
+    "orders": 14515,
+    "trucks": 10
   },
   "precheck_sang": {
     "date": "2026-11-11",

@@ -112,7 +112,7 @@
     "routeScheduleName": "BD__12",
     "typeOps": "pickup",
     "vehiclePlate": "81H-09129",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261109I4YFTNTY": {
     "capacity": 5000,
@@ -126,7 +126,7 @@
     "routeScheduleName": "BD_PY_02",
     "typeOps": "sorting",
     "vehiclePlate": "77H-05923",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E2611099HL3I51C": {
     "capacity": 0,
@@ -259,7 +259,7 @@
       "numOfPkg": 1,
       "numOfPkgBulky": 1
     },
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E2611089QFUTZ3K": {
     "capacity": 0,
@@ -315,7 +315,7 @@
     "routeScheduleName": "BD_02",
     "typeOps": "sorting",
     "vehiclePlate": "61C-11968",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261109S6278WK3": {
     "capacity": 1900,
@@ -332,7 +332,7 @@
     "willDropOff": {
       "numOfPkg": 2
     },
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261109Z0TFT3PI": {
     "capacity": 0,
@@ -402,7 +402,7 @@
     "routeScheduleName": "BD_PY_03 TC",
     "typeOps": "sorting",
     "vehiclePlate": "77H-07195",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261109H6T440QS": {
     "capacity": 1900,
@@ -416,7 +416,7 @@
     "routeScheduleName": "BD_07_01",
     "typeOps": "sorting",
     "vehiclePlate": "50H-24848",
-    "tab": "Đã đến kho",
+    "tab": "Đã rời kho",
     "arrivalTime": "2026-11-10T08:57:16.258Z"
   },
   "E261109ZMQ6FZ74": {
@@ -433,7 +433,7 @@
     "stopSessionStatus": "ARRIVED",
     "typeOps": "sorting",
     "vehiclePlate": "77A-12121",
-    "tab": "Đã đến kho"
+    "tab": "Đã rời kho"
   },
   "E261109B3J4EEF6": {
     "capacity": 0,
@@ -461,7 +461,7 @@
     "routeScheduleName": "BD_07",
     "typeOps": "sorting",
     "vehiclePlate": "51C-69528",
-    "tab": "Đã đến kho",
+    "tab": "Đã rời kho",
     "arrivalTime": "2026-11-10T08:24:32.641Z"
   },
   "E261109M6EP5RXD": {
@@ -480,7 +480,7 @@
       "numOfPkg": 57,
       "numOfPkgBulky": 563
     },
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E2611095U0T7AZ9": {
     "capacity": 8000,
@@ -498,7 +498,7 @@
       "numOfPkg": 63,
       "numOfPkgBulky": 469
     },
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261108PK08OO2S": {
     "capacity": 8000,
@@ -515,7 +515,7 @@
     "willDropOff": {
       "numOfPkgBulky": 320
     },
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E2611089YVFK9OO": {
     "capacity": 8000,
@@ -533,7 +533,7 @@
       "numOfPkg": 2,
       "numOfPkgBulky": 540
     },
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261108B4HH0FQM": {
     "capacity": 8000,
@@ -550,7 +550,7 @@
     "willDropOff": {
       "numOfPkgBulky": 652
     },
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110M50VG752": {
     "capacity": 8000,
@@ -567,7 +567,7 @@
     "willDropOff": {
       "numOfPkgBulky": 340
     },
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E2611092LPUKL43": {
     "capacity": 8000,
@@ -585,7 +585,7 @@
       "numOfPkg": 1,
       "numOfPkgBulky": 40
     },
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110BFU9AERC": {
     "capacity": 1900,
@@ -599,7 +599,7 @@
     "routeScheduleName": "",
     "typeOps": "sorting",
     "vehiclePlate": "77H-05322",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E2611103LPZGDZJ": {
     "capacity": 1900,
@@ -613,7 +613,7 @@
     "routeScheduleName": "",
     "typeOps": "sorting",
     "vehiclePlate": "77H-05850",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110POAN2LS5": {
     "capacity": 1900,
@@ -631,7 +631,7 @@
       "numOfPkg": 3,
       "numOfPkgBulky": 2
     },
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261109TDL6O3U7": {
     "capacity": 5000,
@@ -645,7 +645,7 @@
     "routeScheduleName": "BD_001",
     "typeOps": "delivery_and_pickup",
     "vehiclePlate": "77H-08114",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E2611109JGCWTO9": {
     "capacity": 8000,
@@ -663,7 +663,7 @@
       "numOfPkg": 37,
       "numOfPkgBulky": 326
     },
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261109ZAVIJWLG": {
     "capacity": 5000,
@@ -677,7 +677,7 @@
     "routeScheduleName": "DN_QNG_BD_01",
     "typeOps": "sorting",
     "vehiclePlate": "43H-11602",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110R9MRDNX6": {
     "capacity": 0,
@@ -691,7 +691,7 @@
     "routeScheduleName": "BD_PY_01",
     "typeOps": "sorting",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110THX332TC": {
     "capacity": 0,
@@ -705,7 +705,7 @@
     "routeScheduleName": "BD_PY_08",
     "typeOps": "sorting",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E2611106NKX9LBM": {
     "capacity": 0,
@@ -719,7 +719,7 @@
     "routeScheduleName": "BD_PY_03",
     "typeOps": "delivery_and_pickup",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110ZA2Q7FR4": {
     "capacity": 0,
@@ -733,20 +733,20 @@
     "routeScheduleName": "BD_PY_06_01",
     "typeOps": "sorting",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E2611108AQ28ST8": {
-    "capacity": 0,
-    "driverName": "",
-    "driverPhone": "",
+    "capacity": 1900,
+    "driverName": "Đô Phú Hảo",
+    "driverPhone": "0326696806",
     "excludeSortGroupCodes": null,
-    "expectedArrivalTime": "2026-11-10T20:30:00Z",
+    "expectedArrivalTime": "2026-11-11T14:15:00Z",
     "includeSortGroupCodes": null,
-    "numberOfRemainingStops": 0,
+    "numberOfRemainingStops": 3,
     "partnerTransportationCode": "E2611108AQ28ST8",
     "routeScheduleName": "BD__12",
     "typeOps": "pickup",
-    "vehiclePlate": "",
+    "vehiclePlate": "81H-09129",
     "tab": "Sắp đến kho"
   },
   "E261109TK1H13CF": {
@@ -761,34 +761,34 @@
     "routeScheduleName": "GL_BD_01",
     "typeOps": "sorting",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110F096SGW7": {
-    "capacity": 0,
-    "driverName": "",
-    "driverPhone": "",
+    "capacity": 5000,
+    "driverName": "Thịnh Gia Hân",
+    "driverPhone": "0886299545",
     "excludeSortGroupCodes": null,
-    "expectedArrivalTime": "2026-11-10T20:30:00Z",
+    "expectedArrivalTime": "2026-11-11T14:00:00Z",
     "includeSortGroupCodes": null,
-    "numberOfRemainingStops": 0,
+    "numberOfRemainingStops": 2,
     "partnerTransportationCode": "E261110F096SGW7",
     "routeScheduleName": "BD_PY_02",
     "typeOps": "sorting",
-    "vehiclePlate": "",
+    "vehiclePlate": "77H-05923",
     "tab": "Sắp đến kho"
   },
   "E261110EQ0O25JH": {
-    "capacity": 0,
-    "driverName": "",
-    "driverPhone": "",
+    "capacity": 5000,
+    "driverName": "Huỳnh Tấn Việt",
+    "driverPhone": "0865299139",
     "excludeSortGroupCodes": null,
-    "expectedArrivalTime": "2026-11-10T20:30:00Z",
+    "expectedArrivalTime": "2026-11-11T15:00:00Z",
     "includeSortGroupCodes": null,
-    "numberOfRemainingStops": 0,
+    "numberOfRemainingStops": 2,
     "partnerTransportationCode": "E261110EQ0O25JH",
     "routeScheduleName": "BD_001",
     "typeOps": "delivery_and_pickup",
-    "vehiclePlate": "",
+    "vehiclePlate": "77H-08114",
     "tab": "Sắp đến kho"
   },
   "E261110G9J1URR5": {
@@ -803,7 +803,7 @@
     "routeScheduleName": "BD_PY_06",
     "typeOps": "sorting",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110SQMSW5SJ": {
     "capacity": 0,
@@ -817,7 +817,7 @@
     "routeScheduleName": "BD_14",
     "typeOps": "delivery_and_pickup",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110VGZR6LZK": {
     "capacity": 0,
@@ -831,7 +831,7 @@
     "routeScheduleName": "BD_03",
     "typeOps": "sorting",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110FUU3CFL4": {
     "capacity": 0,
@@ -845,7 +845,7 @@
     "routeScheduleName": "BD_13",
     "typeOps": "sorting",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261109VX6O8AT8": {
     "capacity": 8000,
@@ -862,7 +862,7 @@
     "willDropOff": {
       "numOfPkgBulky": 540
     },
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E26111096Q41E6P": {
     "capacity": 0,
@@ -876,7 +876,7 @@
     "routeScheduleName": "BD_08",
     "typeOps": "sorting",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E2611106BW4RYKI": {
     "capacity": 0,
@@ -890,7 +890,7 @@
     "routeScheduleName": "BD_05",
     "typeOps": "delivery_and_pickup",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110DJP22705": {
     "capacity": 0,
@@ -904,7 +904,7 @@
     "routeScheduleName": "BD_04",
     "typeOps": "delivery_and_pickup",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E2611105R68BLHQ": {
     "capacity": 0,
@@ -918,20 +918,23 @@
     "routeScheduleName": "GHL_Bình Định_ca1",
     "typeOps": "delivery_and_pickup",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261109RRULF9EP": {
-    "capacity": 0,
-    "driverName": "",
-    "driverPhone": "",
+    "capacity": 5000,
+    "driverName": "Một Phương Đông",
+    "driverPhone": "0899335611",
     "excludeSortGroupCodes": null,
-    "expectedArrivalTime": "2026-11-10T23:00:00Z",
+    "expectedArrivalTime": "2026-11-11T20:25:00Z",
     "includeSortGroupCodes": null,
-    "numberOfRemainingStops": 1,
+    "numberOfRemainingStops": 0,
     "partnerTransportationCode": "E261109RRULF9EP",
     "routeScheduleName": "DN_BD_KH_01",
     "typeOps": "delivery_and_pickup",
-    "vehiclePlate": "",
+    "vehiclePlate": "43H-17355",
+    "willDropOff": {
+      "numOfPkgBulky": 1
+    },
     "tab": "Sắp đến kho"
   },
   "E261109WQPUQR3V": {
@@ -946,7 +949,7 @@
     "routeScheduleName": "HCM_BĐ_01",
     "typeOps": "sorting",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110YZLCXJN2": {
     "capacity": 0,
@@ -960,7 +963,7 @@
     "routeScheduleName": "BD_PY_09",
     "typeOps": "sorting",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110WMMLSTFB": {
     "capacity": 0,
@@ -974,20 +977,20 @@
     "routeScheduleName": "GL_05",
     "typeOps": "delivery_and_pickup",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110O13YLZ3J": {
-    "capacity": 0,
-    "driverName": "",
-    "driverPhone": "",
+    "capacity": 1900,
+    "driverName": "Nguyễn Duy Hải",
+    "driverPhone": "0968698307",
     "excludeSortGroupCodes": null,
-    "expectedArrivalTime": "2026-11-11T02:45:00Z",
+    "expectedArrivalTime": "2026-11-11T14:00:00Z",
     "includeSortGroupCodes": null,
-    "numberOfRemainingStops": 0,
+    "numberOfRemainingStops": 3,
     "partnerTransportationCode": "E261110O13YLZ3J",
     "routeScheduleName": "BD_02",
-    "typeOps": "delivery_and_pickup",
-    "vehiclePlate": "",
+    "typeOps": "sorting",
+    "vehiclePlate": "61C-11968",
     "tab": "Sắp đến kho"
   },
   "E2611102ZFXDWSQ": {
@@ -1002,20 +1005,20 @@
     "routeScheduleName": "BD_06",
     "typeOps": "delivery_and_pickup",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110N9THE75I": {
-    "capacity": 0,
-    "driverName": "",
-    "driverPhone": "",
+    "capacity": 1900,
+    "driverName": "Đinh Hậu",
+    "driverPhone": "0392194881",
     "excludeSortGroupCodes": null,
-    "expectedArrivalTime": "2026-11-11T03:00:00Z",
+    "expectedArrivalTime": "2026-11-11T10:20:00Z",
     "includeSortGroupCodes": null,
     "numberOfRemainingStops": 0,
     "partnerTransportationCode": "E261110N9THE75I",
     "routeScheduleName": "BD_PY_04",
     "typeOps": "sorting",
-    "vehiclePlate": "",
+    "vehiclePlate": "77H-05918",
     "tab": "Sắp đến kho"
   },
   "E261110SQNCLDL8": {
@@ -1030,7 +1033,7 @@
     "routeScheduleName": "BD_PY_07",
     "typeOps": "delivery_and_pickup",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E2611092MANWH1A": {
     "capacity": 8000,
@@ -1047,20 +1050,20 @@
     "willDropOff": {
       "numOfPkgBulky": 3
     },
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110FCBWIADJ": {
-    "capacity": 0,
-    "driverName": "",
-    "driverPhone": "",
+    "capacity": 1900,
+    "driverName": "Quốc Ngọc Dư",
+    "driverPhone": "0339985542",
     "excludeSortGroupCodes": null,
-    "expectedArrivalTime": "2026-11-11T06:00:00Z",
+    "expectedArrivalTime": "2026-11-11T15:00:00Z",
     "includeSortGroupCodes": null,
-    "numberOfRemainingStops": 0,
+    "numberOfRemainingStops": 5,
     "partnerTransportationCode": "E261110FCBWIADJ",
     "routeScheduleName": "BD_PY_03 TC",
-    "typeOps": "delivery_and_pickup",
-    "vehiclePlate": "",
+    "typeOps": "sorting",
+    "vehiclePlate": "77H-07195",
     "tab": "Sắp đến kho"
   },
   "E261109HLEQKOH3": {
@@ -1075,12 +1078,12 @@
     "routeScheduleName": "HCM_BĐ_02",
     "typeOps": "delivery_and_pickup",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110FWVFX5QT": {
-    "capacity": 0,
-    "driverName": "",
-    "driverPhone": "",
+    "capacity": 1900,
+    "driverName": "Thái NCC Gia Hân",
+    "driverPhone": "0984062392",
     "excludeSortGroupCodes": null,
     "expectedArrivalTime": "2026-11-11T09:00:00Z",
     "includeSortGroupCodes": null,
@@ -1088,22 +1091,24 @@
     "partnerTransportationCode": "E261110FWVFX5QT",
     "routeScheduleName": "BD_07_01",
     "typeOps": "sorting",
-    "vehiclePlate": "",
+    "vehiclePlate": "50H-24848",
     "tab": "Sắp đến kho"
   },
   "E261110X3CT8MFT": {
-    "capacity": 0,
-    "driverName": "",
-    "driverPhone": "",
+    "arrivalTime": "2026-11-11T04:33:04.292Z",
+    "capacity": 500,
+    "driverName": "B2B Bình Định",
+    "driverPhone": "0770000000",
     "excludeSortGroupCodes": null,
     "expectedArrivalTime": "2026-11-11T09:00:00Z",
+    "expectedDepartureTime": "2026-11-11T11:00:00Z",
     "includeSortGroupCodes": null,
-    "numberOfRemainingStops": 0,
     "partnerTransportationCode": "E261110X3CT8MFT",
     "routeScheduleName": "GHL_Bình Định_Ca 3",
+    "stopSessionStatus": "ARRIVED",
     "typeOps": "sorting",
-    "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "vehiclePlate": "77E-12345",
+    "tab": "Đã đến kho"
   },
   "E261110WXOXVSBW": {
     "capacity": 0,
@@ -1117,48 +1122,57 @@
     "routeScheduleName": "BD_09",
     "typeOps": "sorting",
     "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "tab": "Đã rời kho"
   },
   "E261110JAPO7TTK": {
-    "capacity": 0,
-    "driverName": "",
-    "driverPhone": "",
+    "capacity": 1900,
+    "driverName": "Luận Gia Hân",
+    "driverPhone": "0981918915",
     "excludeSortGroupCodes": null,
-    "expectedArrivalTime": "2026-11-11T10:30:00Z",
+    "expectedArrivalTime": "2026-11-11T14:25:00Z",
     "includeSortGroupCodes": null,
-    "numberOfRemainingStops": 0,
+    "numberOfRemainingStops": 5,
     "partnerTransportationCode": "E261110JAPO7TTK",
     "routeScheduleName": "BD_07",
     "typeOps": "sorting",
-    "vehiclePlate": "",
-    "tab": "Sắp đến kho"
+    "vehiclePlate": "51C-69528",
+    "tab": "Đã đến kho",
+    "arrivalTime": "2026-11-11T07:57:26.933Z"
   },
   "E261110OFXBWAYR": {
-    "capacity": 0,
-    "driverName": "",
-    "driverPhone": "",
+    "capacity": 8000,
+    "driverName": "3129145 Nguyễn Trọng Tính",
+    "driverPhone": "0971496879",
     "excludeSortGroupCodes": null,
     "expectedArrivalTime": "2026-11-11T11:30:00Z",
     "includeSortGroupCodes": null,
-    "numberOfRemainingStops": 2,
+    "numberOfRemainingStops": 0,
     "partnerTransportationCode": "E261110OFXBWAYR",
     "routeScheduleName": "HCM_BĐ_04",
     "typeOps": "delivery_and_pickup",
-    "vehiclePlate": "",
+    "vehiclePlate": "29E-12705",
+    "willDropOff": {
+      "numOfPkg": 25,
+      "numOfPkgBulky": 675
+    },
     "tab": "Sắp đến kho"
   },
   "E261110H43M0HPX": {
-    "capacity": 0,
-    "driverName": "",
-    "driverPhone": "",
+    "capacity": 8000,
+    "driverName": "3051966\tNguyễn Phú",
+    "driverPhone": "0345844173",
     "excludeSortGroupCodes": null,
     "expectedArrivalTime": "2026-11-11T12:00:00Z",
     "includeSortGroupCodes": null,
-    "numberOfRemainingStops": 2,
+    "numberOfRemainingStops": 0,
     "partnerTransportationCode": "E261110H43M0HPX",
     "routeScheduleName": "HCM_BĐ_03",
     "typeOps": "delivery_and_pickup",
-    "vehiclePlate": "",
+    "vehiclePlate": "50E-38643",
+    "willDropOff": {
+      "numOfPkg": 71,
+      "numOfPkgBulky": 327
+    },
     "tab": "Sắp đến kho"
   },
   "E261109LEL2XV90": {
@@ -1176,31 +1190,37 @@
     "tab": "Sắp đến kho"
   },
   "E261109STQ3T4W7": {
-    "capacity": 0,
-    "driverName": "",
-    "driverPhone": "",
+    "capacity": 8000,
+    "driverName": "Hồ Sỹ Lương",
+    "driverPhone": "0978963686",
     "excludeSortGroupCodes": null,
     "expectedArrivalTime": "2026-11-11T14:30:00Z",
     "includeSortGroupCodes": null,
-    "numberOfRemainingStops": 2,
+    "numberOfRemainingStops": 0,
     "partnerTransportationCode": "E261109STQ3T4W7",
     "routeScheduleName": "HN_KH_01",
     "typeOps": "delivery_and_pickup",
-    "vehiclePlate": "",
+    "vehiclePlate": "29E-26734",
+    "willDropOff": {
+      "numOfPkgBulky": 242
+    },
     "tab": "Sắp đến kho"
   },
   "E26110953VQ0QTL": {
-    "capacity": 0,
-    "driverName": "",
-    "driverPhone": "",
+    "capacity": 8000,
+    "driverName": "HỒ XUÂN HÙNG",
+    "driverPhone": "0365714059",
     "excludeSortGroupCodes": null,
     "expectedArrivalTime": "2026-11-11T16:00:00Z",
     "includeSortGroupCodes": null,
-    "numberOfRemainingStops": 1,
+    "numberOfRemainingStops": 0,
     "partnerTransportationCode": "E26110953VQ0QTL",
     "routeScheduleName": "HY_BĐ_01_01",
     "typeOps": "sorting",
-    "vehiclePlate": "",
+    "vehiclePlate": "50H-24990",
+    "willDropOff": {
+      "numOfPkgBulky": 501
+    },
     "tab": "Sắp đến kho"
   },
   "E26110993UQYX9E": {
@@ -1217,6 +1237,696 @@
     "stopSessionStatus": "TRANSFERRING",
     "typeOps": "pickup",
     "vehiclePlate": "50H-00613",
-    "tab": "Đã đến kho"
+    "tab": "Đã rời kho"
+  },
+  "E261107SS9X18E5": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-09T18:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 2,
+    "partnerTransportationCode": "E261107SS9X18E5",
+    "routeScheduleName": "HN_KH_02",
+    "typeOps": "sorting",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261111NKC3BG6K": {
+    "capacity": 1900,
+    "driverName": "Trung Gia Hân",
+    "driverPhone": "0397344298",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T10:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111NKC3BG6K",
+    "routeScheduleName": "",
+    "typeOps": "sorting",
+    "vehiclePlate": "77H-05322",
+    "tab": "Sắp đến kho"
+  },
+  "E261111Y4WIRD8L": {
+    "capacity": 1900,
+    "driverName": "Bảo NCC Gia Hân",
+    "driverPhone": "0343308607",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T14:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 3,
+    "partnerTransportationCode": "E261111Y4WIRD8L",
+    "routeScheduleName": "",
+    "typeOps": "sorting",
+    "vehiclePlate": "77H-05850",
+    "tab": "Sắp đến kho"
+  },
+  "E261111SDKSTNMX": {
+    "capacity": 1900,
+    "driverName": "An Gia Hân",
+    "driverPhone": "0385176440",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T14:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 2,
+    "partnerTransportationCode": "E261111SDKSTNMX",
+    "routeScheduleName": "",
+    "typeOps": "sorting",
+    "vehiclePlate": "81H-07261",
+    "willDropOff": {
+      "numOfPkg": 3,
+      "numOfPkgBulky": 6
+    },
+    "tab": "Sắp đến kho"
+  },
+  "E261111AXQYCHHI": {
+    "capacity": 15000,
+    "driverName": "3134286 Nguyễn Văn Thanh",
+    "driverPhone": "0989783064",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T15:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 1,
+    "partnerTransportationCode": "E261111AXQYCHHI",
+    "routeScheduleName": "",
+    "typeOps": "delivery_and_pickup",
+    "vehiclePlate": "50H-00420",
+    "willDropOff": {
+      "numOfPkg": 36,
+      "numOfPkgBulky": 361
+    },
+    "tab": "Sắp đến kho"
+  },
+  "E261109B3L31C3L": {
+    "capacity": 8000,
+    "driverName": "Nguyễn Minh Thanh",
+    "driverPhone": "0988699277",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T18:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261109B3L31C3L",
+    "routeScheduleName": "HN_KH_02",
+    "typeOps": "sorting",
+    "vehiclePlate": "29E-75043",
+    "willDropOff": {
+      "numOfPkgBulky": 292
+    },
+    "tab": "Sắp đến kho"
+  },
+  "E261111SC23X942": {
+    "capacity": 8000,
+    "driverName": "3143376\tPhùng Ngọc Thọ",
+    "driverPhone": "0909456118",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T19:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111SC23X942",
+    "routeScheduleName": "",
+    "typeOps": "sorting",
+    "vehiclePlate": "50H-86596",
+    "willDropOff": {
+      "numOfPkg": 2,
+      "numOfPkgBulky": 447
+    },
+    "tab": "Sắp đến kho"
+  },
+  "E261110TG5D4CCV": {
+    "capacity": 5000,
+    "driverName": "Tính NCC Đông",
+    "driverPhone": "0867723367",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T19:45:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 1,
+    "partnerTransportationCode": "E261110TG5D4CCV",
+    "routeScheduleName": "DN_QNG_BD_01",
+    "typeOps": "sorting",
+    "vehiclePlate": "43H-11602",
+    "tab": "Sắp đến kho"
+  },
+  "E261111FAZFY3NP": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T20:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111FAZFY3NP",
+    "routeScheduleName": "BD_PY_01",
+    "typeOps": "sorting",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E2611112R34U936": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T20:15:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E2611112R34U936",
+    "routeScheduleName": "BD_PY_08",
+    "typeOps": "sorting",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261111HWUNGBO1": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T20:15:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111HWUNGBO1",
+    "routeScheduleName": "BD_PY_03",
+    "typeOps": "delivery_and_pickup",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E2611104I12YWER": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T20:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 1,
+    "partnerTransportationCode": "E2611104I12YWER",
+    "routeScheduleName": "GL_BD_01",
+    "typeOps": "sorting",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261111OXWM9RTT": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T20:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111OXWM9RTT",
+    "routeScheduleName": "BD_PY_06_01",
+    "typeOps": "sorting",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E26111167WZABUO": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T20:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E26111167WZABUO",
+    "routeScheduleName": "BD_PY_02",
+    "typeOps": "sorting",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E26111126QPKJLA": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T20:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E26111126QPKJLA",
+    "routeScheduleName": "BD_001",
+    "typeOps": "delivery_and_pickup",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261111T39ULBSG": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T20:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111T39ULBSG",
+    "routeScheduleName": "BD__12",
+    "typeOps": "pickup",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E2611113BH2W1VP": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T20:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E2611113BH2W1VP",
+    "routeScheduleName": "BD_PY_06",
+    "typeOps": "sorting",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E2611115HUGLGFM": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T20:45:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E2611115HUGLGFM",
+    "routeScheduleName": "BD_14",
+    "typeOps": "delivery_and_pickup",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E26111039XB0966": {
+    "capacity": 8000,
+    "driverName": "Chu Sỹ Chính",
+    "driverPhone": "0373963644",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T21:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E26111039XB0966",
+    "routeScheduleName": "HY_BĐ_KH_01_01",
+    "typeOps": "sorting",
+    "vehiclePlate": "29H-73994",
+    "willDropOff": {
+      "numOfPkgBulky": 607
+    },
+    "tab": "Sắp đến kho"
+  },
+  "E261111GWNGFYZU": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T21:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111GWNGFYZU",
+    "routeScheduleName": "BD_03",
+    "typeOps": "sorting",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261111STZZ67SO": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T21:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111STZZ67SO",
+    "routeScheduleName": "BD_13",
+    "typeOps": "sorting",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E2611110SQ5FAAV": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T21:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E2611110SQ5FAAV",
+    "routeScheduleName": "BD_05",
+    "typeOps": "delivery_and_pickup",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261111BW81UK1B": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T21:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111BW81UK1B",
+    "routeScheduleName": "BD_04",
+    "typeOps": "delivery_and_pickup",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261111N8G07CWD": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T21:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111N8G07CWD",
+    "routeScheduleName": "BD_08",
+    "typeOps": "sorting",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261111GTQM63X3": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T22:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111GTQM63X3",
+    "routeScheduleName": "GHL_Bình Định_ca1",
+    "typeOps": "delivery_and_pickup",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261110OAVTAJQT": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-11T23:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 1,
+    "partnerTransportationCode": "E261110OAVTAJQT",
+    "routeScheduleName": "DN_BD_KH_01",
+    "typeOps": "delivery_and_pickup",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E26111091F5B61G": {
+    "capacity": 8000,
+    "driverName": "NGUYỄN HỮU VINH",
+    "driverPhone": "0916913924",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T02:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 1,
+    "partnerTransportationCode": "E26111091F5B61G",
+    "routeScheduleName": "HCM_BĐ_01",
+    "typeOps": "sorting",
+    "vehiclePlate": "50E-06326",
+    "tab": "Sắp đến kho"
+  },
+  "E261111EMSLXXX4": {
+    "capacity": 8000,
+    "driverName": "3141291 Mai Thanh Bình",
+    "driverPhone": "0337599201",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T02:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 1,
+    "partnerTransportationCode": "E261111EMSLXXX4",
+    "routeScheduleName": "",
+    "typeOps": "sorting",
+    "vehiclePlate": "50H-86563",
+    "tab": "Sắp đến kho"
+  },
+  "E261111N89K5AQH": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T02:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111N89K5AQH",
+    "routeScheduleName": "BD_PY_09",
+    "typeOps": "sorting",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E2611114UYHOV18": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T02:35:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 2,
+    "partnerTransportationCode": "E2611114UYHOV18",
+    "routeScheduleName": "GL_05",
+    "typeOps": "delivery_and_pickup",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E2611118WKQ6ZFZ": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T02:45:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E2611118WKQ6ZFZ",
+    "routeScheduleName": "BD_02",
+    "typeOps": "delivery_and_pickup",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E26111155UFDZA6": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T03:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E26111155UFDZA6",
+    "routeScheduleName": "BD_06",
+    "typeOps": "delivery_and_pickup",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261111D1D7ZN7P": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T03:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111D1D7ZN7P",
+    "routeScheduleName": "BD_PY_04",
+    "typeOps": "sorting",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261111GO4DTWPD": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T03:15:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111GO4DTWPD",
+    "routeScheduleName": "BD_PY_07",
+    "typeOps": "delivery_and_pickup",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261111HPDUXEY8": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T06:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111HPDUXEY8",
+    "routeScheduleName": "BD_PY_03 TC",
+    "typeOps": "delivery_and_pickup",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261110QEJLXPI1": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T06:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 1,
+    "partnerTransportationCode": "E261110QEJLXPI1",
+    "routeScheduleName": "HCM_BĐ_02",
+    "typeOps": "delivery_and_pickup",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261111FWDSYYLK": {
+    "capacity": 8000,
+    "driverName": "Phạm Công Thế",
+    "driverPhone": "0975090987",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T08:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111FWDSYYLK",
+    "routeScheduleName": "",
+    "typeOps": "sorting",
+    "vehiclePlate": "29E-25758",
+    "tab": "Sắp đến kho"
+  },
+  "E261111R9JAHJYD": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T09:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111R9JAHJYD",
+    "routeScheduleName": "BD_07_01",
+    "typeOps": "sorting",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261111Q835VKYG": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T09:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111Q835VKYG",
+    "routeScheduleName": "GHL_Bình Định_Ca 3",
+    "typeOps": "sorting",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E2611114PIJXUH0": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T10:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E2611114PIJXUH0",
+    "routeScheduleName": "BD_09",
+    "typeOps": "sorting",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E2611112SKA8ECL": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T10:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E2611112SKA8ECL",
+    "routeScheduleName": "BD_07",
+    "typeOps": "sorting",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261111TUK0SSPL": {
+    "capacity": 1900,
+    "driverName": "Tiến Gia Hân",
+    "driverPhone": "0905222444",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T10:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 0,
+    "partnerTransportationCode": "E261111TUK0SSPL",
+    "routeScheduleName": "",
+    "typeOps": "sorting",
+    "vehiclePlate": "81H-07174",
+    "tab": "Sắp đến kho"
+  },
+  "E261111X6E61B9Q": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T11:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 2,
+    "partnerTransportationCode": "E261111X6E61B9Q",
+    "routeScheduleName": "HCM_BĐ_04",
+    "typeOps": "delivery_and_pickup",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261111JSHAS5WO": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T12:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 2,
+    "partnerTransportationCode": "E261111JSHAS5WO",
+    "routeScheduleName": "HCM_BĐ_03",
+    "typeOps": "delivery_and_pickup",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261110ZP8B3P55": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T12:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 1,
+    "partnerTransportationCode": "E261110ZP8B3P55",
+    "routeScheduleName": "HN_BĐ_KH_01",
+    "typeOps": "delivery",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261110EAYJZJ8C": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T14:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 2,
+    "partnerTransportationCode": "E261110EAYJZJ8C",
+    "routeScheduleName": "HN_KH_01",
+    "typeOps": "delivery_and_pickup",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
+  },
+  "E261111LE704KXW": {
+    "capacity": 1900,
+    "driverName": "Tính Ncc Gia Hân",
+    "driverPhone": "0964249044",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T14:30:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 1,
+    "partnerTransportationCode": "E261111LE704KXW",
+    "routeScheduleName": "",
+    "typeOps": "sorting",
+    "vehiclePlate": "77H-06690",
+    "tab": "Sắp đến kho"
+  },
+  "E2611103VEDSIOT": {
+    "capacity": 0,
+    "driverName": "",
+    "driverPhone": "",
+    "excludeSortGroupCodes": null,
+    "expectedArrivalTime": "2026-11-12T16:00:00Z",
+    "includeSortGroupCodes": null,
+    "numberOfRemainingStops": 1,
+    "partnerTransportationCode": "E2611103VEDSIOT",
+    "routeScheduleName": "HY_BĐ_01_01",
+    "typeOps": "sorting",
+    "vehiclePlate": "",
+    "tab": "Sắp đến kho"
   }
 }

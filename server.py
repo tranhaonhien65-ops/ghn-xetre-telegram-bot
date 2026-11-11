@@ -105,6 +105,7 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
             sl_state = get_sl_state()
         except Exception:
             sl_state = {}
+        bot_status_summary = {k: v for k, v in BOT_STATUS.items() if k not in ("latest_trips", "latest_delayed")}
         res = {
             "status": "online",
             "service": "GHN Late Truck Telegram Bot Cloud Worker",
@@ -115,7 +116,7 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
             },
             "token": token_info,
             "sl_state": sl_state,
-            "bot_status": BOT_STATUS,
+            "bot_status": bot_status_summary,
             "recent_logs": list(RECENT_LOGS)
         }
         self.wfile.write(json.dumps(res, ensure_ascii=False, indent=2).encode("utf-8"))
