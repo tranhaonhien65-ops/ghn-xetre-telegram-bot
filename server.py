@@ -65,10 +65,11 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
                 shift = "ca2"
             elif any(k in self.path for k in ["ca_dem", "ca1", "ca_1"]):
                 shift = "ca1"
+            force = "force" in self.path
             try:
                 from sl_pipeline import run_pipeline
-                threading.Thread(target=run_pipeline, kwargs={"shift": shift}, daemon=True).start()
-                res = {"status": "success", "message": f"Triggered SL report {shift} in background"}
+                threading.Thread(target=run_pipeline, kwargs={"shift": shift, "force": force}, daemon=True).start()
+                res = {"status": "success", "message": f"Triggered SL report {shift} in background (force={force})"}
             except Exception as e:
                 res = {"status": "error", "message": str(e)}
             self.wfile.write(json.dumps(res, ensure_ascii=False, indent=2).encode("utf-8"))
@@ -99,6 +100,11 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
 
         cfg = load_config()
         current_bot_token = cfg.get("BOT_TOKEN", "").strip()
+        try:
+            from sl_pipeline import get_sl_state
+            sl_state = get_sl_state()
+        except Exception:
+            sl_state = {}
         res = {
             "status": "online",
             "service": "GHN Late Truck Telegram Bot Cloud Worker",
@@ -108,6 +114,7 @@ class CloudTokenHandler(BaseHTTPRequestHandler):
                 "preview": f"{current_bot_token[:8]}...{current_bot_token[-4:]}" if current_bot_token else None
             },
             "token": token_info,
+            "sl_state": sl_state,
             "bot_status": BOT_STATUS,
             "recent_logs": list(RECENT_LOGS)
         }

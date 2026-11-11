@@ -4,3 +4,6 @@ __pycache__/
 .DS_Store
 ghn_token.txt
 bot_token.txt
+SL_BD_ca*.xlsx
+SL_BD_ca*.png
+

@@ -1457,14 +1457,15 @@
     "driverName": "Thái NCC Gia Hân",
     "driverPhone": "0984062392",
     "excludeSortGroupCodes": null,
-    "expectedArrivalTime": "2026-11-10T09:00:00Z",
+    "expectedArrivalTime": "2026-11-10T14:40:00Z",
     "includeSortGroupCodes": null,
-    "numberOfRemainingStops": 0,
+    "numberOfRemainingStops": 3,
     "partnerTransportationCode": "E261109H6T440QS",
     "routeScheduleName": "BD_07_01",
     "typeOps": "sorting",
     "vehiclePlate": "50H-24848",
-    "tab": "Sắp đến kho"
+    "tab": "Đã đến kho",
+    "arrivalTime": "2026-11-10T08:57:16.258Z"
   },
   "E261109ZMQ6FZ74": {
     "arrivalTime": "2026-11-10T04:38:41.829Z",

@@ -4,6 +4,7 @@ import json
 import ssl
 import time
 import requests
+import threading
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -11,8 +12,52 @@ BASE_DIR = Path(__file__).resolve().parent
 SSO_TOKEN_FILE = BASE_DIR / "ghn_sso_token.txt"
 GHN_TOKEN_FILE = BASE_DIR / "ghn_token.txt"
 METABASE_JWT_FILE = BASE_DIR / "metabase_jwt.txt"
+SL_STATE_FILE = BASE_DIR / "sl_run_state.json"
 
 VN_TZ = timezone(timedelta(hours=7))
+
+_PIPELINE_LOCK = threading.Lock()
+_IS_PIPELINE_RUNNING = False
+
+def get_sl_state():
+    if SL_STATE_FILE.exists():
+        try:
+            return json.loads(SL_STATE_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+    return {}
+
+def is_already_run_today(shift_key, today_str):
+    state = get_sl_state()
+    item = state.get(shift_key)
+    if not item:
+        return False
+    if isinstance(item, str):
+        return item == today_str
+    if isinstance(item, dict):
+        if item.get("date") == today_str and item.get("status") == "completed":
+            return True
+        if item.get("date") == today_str and item.get("status") == "running":
+            started_at = item.get("started_at", 0)
+            if time.time() - started_at < 300:
+                return True
+    return False
+
+def mark_sl_state(shift_key, today_str, status="completed", **extra):
+    state = get_sl_state()
+    now_str = datetime.now(VN_TZ).strftime("%Y-%m-%d %H:%M:%S")
+    entry = {
+        "date": today_str,
+        "status": status,
+        "updated_at": now_str,
+        "started_at": time.time()
+    }
+    entry.update(extra)
+    state[shift_key] = entry
+    try:
+        SL_STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as e:
+        print(f"[WARN] Failed to write SL state: {e}")
 
 def parse_iso_dt(dt_str):
     if not dt_str:
@@ -526,11 +571,8 @@ def fetch_metabase_orders(packages, jwt_token=None):
 
     return all_rows
 
-def run_pipeline(shift="ca1", target_date=None):
-    sso_token = get_sso_token()
-    if not sso_token:
-        print("[ERROR] SSO token is missing!")
-        return
+def run_pipeline(shift="ca1", target_date=None, force=False):
+    global _IS_PIPELINE_RUNNING
 
     if not target_date:
         dt = datetime.now(VN_TZ)
@@ -540,143 +582,175 @@ def run_pipeline(shift="ca1", target_date=None):
     is_ca2 = str(shift).lower() in ("ca2", "ca_2", "ca_sang", "ca_ngay", "ca 2")
     shift_code = "ca2" if is_ca2 else "ca1"
     shift_label = "Ca 2 (Ca Ngày)" if is_ca2 else "Ca 1 (Ca Đêm)"
+    shift_key = "ca_sang" if is_ca2 else "ca_dem"
+    today_str = dt.strftime("%Y-%m-%d")
     date_str = dt.strftime("%d/%m/%Y")
-    print(f"\n=================================================================")
-    print(f"🚀 TỰ ĐỘNG TẠO BÁO CÁO SL BD ({shift_label} - Ngày {date_str})")
-    print(f"=================================================================")
 
-    matched_trips = fetch_trips_for_shift(shift, dt, sso_token)
-    print(f"🚚 Tìm thấy {len(matched_trips)} chuyến xe {shift_label}")
-
-    try:
-        packages, trip_to_pkgs, valid_matched_trips = extract_packages_for_trips(matched_trips, sso_token)
-    except PermissionError:
-        print("⚠️ [ERROR] Không thể lấy kiện hàng vì Token GHN đã hết hạn!")
-        msg_err = (
-            f"⚠️ <b>CẢNH BÁO BÁO CÁO SẢN LƯỢNG {shift_label.upper()} ({date_str}):</b>\n"
-            f"Hệ thống phát hiện có <b>{len(matched_trips)} chuyến xe trục</b> nhưng không thể quét dữ liệu kiện hàng do <b>Token GHN đã hết hạn (TOKEN_NOT_ALIVE)!</b>\n\n"
-            f"👉 <b>Khắc phục:</b> Vui lòng mở trang <code>https://baocao.ghn.vn/</code> hoặc <code>https://nhanh.ghn.vn/</code> trên trình duyệt để cập nhật Token mới!"
-        )
-        try:
-            url_err = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-            requests.post(url_err, data={"chat_id": TELEGRAM_CHAT_ID, "text": msg_err, "parse_mode": "HTML"}, timeout=15)
-        except Exception:
-            pass
+    if not force and is_already_run_today(shift_key, today_str):
+        print(f"⏭️ [SKIP] Báo cáo {shift_label} ngày {today_str} đã được gửi thành công trước đó. Bỏ qua để tránh gửi trùng lặp!")
         return
 
-    print(f"📦 Tổng cộng thu thập được: {len(packages)} mã kiện duy nhất.")
+    with _PIPELINE_LOCK:
+        if _IS_PIPELINE_RUNNING:
+            print(f"⚠️ [BUSY] Đang có một tiến trình tạo báo cáo sản lượng đang chạy, bỏ qua yêu cầu mới.")
+            return
+        _IS_PIPELINE_RUNNING = True
 
-    if not packages or not valid_matched_trips:
-        print("⚠️ Không có kiện hàng / chuyến xe nào hợp lệ trong ca này.")
-        orders_rows = []
-    else:
-        orders_rows = fetch_metabase_orders(packages)
-        print(f"✅ Lấy thành công: {len(orders_rows)} đơn hàng từ Metabase.")
-        if len(packages) > 0 and len(orders_rows) == 0:
-            print("⚠️ [ERROR] Có kiện hàng nhưng Metabase trả về 0 đơn (Token Báo Cáo hết hạn)!")
+    try:
+        mark_sl_state(shift_key, today_str, status="running")
+
+        sso_token = get_sso_token()
+        if not sso_token:
+            print("[ERROR] SSO token is missing!")
+            mark_sl_state(shift_key, today_str, status="missing_sso")
+            return
+
+        print(f"\n=================================================================")
+        print(f"🚀 TỰ ĐỘNG TẠO BÁO CÁO SL BD ({shift_label} - Ngày {date_str})")
+        print(f"=================================================================")
+
+        matched_trips = fetch_trips_for_shift(shift, dt, sso_token)
+        print(f"🚚 Tìm thấy {len(matched_trips)} chuyến xe {shift_label}")
+
+        try:
+            packages, trip_to_pkgs, valid_matched_trips = extract_packages_for_trips(matched_trips, sso_token)
+        except PermissionError:
+            print("⚠️ [ERROR] Không thể lấy kiện hàng vì Token GHN đã hết hạn!")
+            mark_sl_state(shift_key, today_str, status="token_expired")
             msg_err = (
                 f"⚠️ <b>CẢNH BÁO BÁO CÁO SẢN LƯỢNG {shift_label.upper()} ({date_str}):</b>\n"
-                f"Hệ thống đã gom được <b>{len(valid_matched_trips)} xe trục ({len(packages):,} kiện)</b> nhưng không thể truy vấn số đơn từ Metabase do <b>Token GHN / Báo Cáo đã hết hạn!</b>\n\n"
-                f"👉 <b>Khắc phục:</b> Vui lòng mở trang <code>https://baocao.ghn.vn/</code> trên trình duyệt để tự động cập nhật Token mới và hệ thống sẽ xuất lại báo cáo ngay!"
+                f"Hệ thống phát hiện có <b>{len(matched_trips)} chuyến xe trục</b> nhưng không thể quét dữ liệu kiện hàng do <b>Token GHN đã hết hạn (TOKEN_NOT_ALIVE)!</b>\n\n"
+                f"👉 <b>Khắc phục:</b> Vui lòng mở trang <code>https://baocao.ghn.vn/</code> hoặc <code>https://nhanh.ghn.vn/</code> trên trình duyệt để cập nhật Token mới!"
             )
             try:
                 url_err = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
                 requests.post(url_err, data={"chat_id": TELEGRAM_CHAT_ID, "text": msg_err, "parse_mode": "HTML"}, timeout=15)
-            except Exception as e_err:
-                print(f"[WARN] Không thể gửi cảnh báo token hết hạn: {e_err}")
+            except Exception:
+                pass
             return
 
-    ma_to_ten, ten_to_tuyen = load_dictionaries(shift=shift_code)
-    processed_orders, summary_routes, bc_orders = process_orders(orders_rows, ma_to_ten, ten_to_tuyen, shift=shift_code)
+        print(f"📦 Tổng cộng thu thập được: {len(packages)} mã kiện duy nhất.")
 
-    valid_route_names = set(s['tuyen'] for s in summary_routes)
-    pkg_to_valid_orders_cnt = {}
-    for ord_item in processed_orders:
-        if ord_item['tuyen'] in valid_route_names:
-            pkg_code = ord_item['package']
-            pkg_to_valid_orders_cnt[pkg_code] = pkg_to_valid_orders_cnt.get(pkg_code, 0) + 1
-
-    truck_data = []
-    for t, eta, pkg_cnt in valid_matched_trips:
-        code = t.get("partnerTransportationCode")
-        plate = t.get("vehiclePlate") or ""
-        rname = t.get("routeScheduleName") or "N/A"
-        
-        detail_arr, detail_dep, detail_plate = fetch_trip_stop_times(code, sso_token)
-        if detail_plate:
-            plate = detail_plate
-        
-        eta_dt = detail_arr if detail_arr else eta
-        etd_dt = detail_dep
-
-        eta_str = eta_dt.strftime("%d/%m %H:%M") if eta_dt else "--"
-        etd_str = etd_dt.strftime("%d/%m %H:%M") if etd_dt else "--"
-
-        pkgs = trip_to_pkgs.get(code, set())
-        orders_cnt = sum(pkg_to_valid_orders_cnt.get(p, 0) for p in pkgs)
-
-        # Lấy số kiện theo mục CẦN NHẬN (Cồng kềnh, Bao cần rã, Bao chuyển tiếp) của KTC Bình Định
-        w_drop = t.get("willDropOff") or {}
-        bulky = w_drop.get("numOfPkgBulky") or 0
-        bag_unload = w_drop.get("numOfPkg") or w_drop.get("numOfBag") or 0
-        bag_relay = w_drop.get("numOfPkgRelay") or w_drop.get("numOfRelay") or w_drop.get("numOfTransit") or 0
-
-        if w_drop and (bulky > 0 or bag_unload > 0 or bag_relay > 0):
-            dropoff_pkgs_cnt = bulky + bag_unload + bag_relay
+        if not packages or not valid_matched_trips:
+            print("⚠️ Không có kiện hàng / chuyến xe nào hợp lệ trong ca này.")
+            orders_rows = []
         else:
-            dropoff_pkgs_cnt = len(pkgs)
+            orders_rows = fetch_metabase_orders(packages)
+            print(f"✅ Lấy thành công: {len(orders_rows)} đơn hàng từ Metabase.")
+            if len(packages) > 0 and len(orders_rows) == 0:
+                print("⚠️ [ERROR] Có kiện hàng nhưng Metabase trả về 0 đơn (Token Báo Cáo hết hạn)!")
+                mark_sl_state(shift_key, today_str, status="token_expired")
+                msg_err = (
+                    f"⚠️ <b>CẢNH BÁO BÁO CÁO SẢN LƯỢNG {shift_label.upper()} ({date_str}):</b>\n"
+                    f"Hệ thống đã gom được <b>{len(valid_matched_trips)} xe trục ({len(packages):,} kiện)</b> nhưng không thể truy vấn số đơn từ Metabase do <b>Token GHN / Báo Cáo đã hết hạn!</b>\n\n"
+                    f"👉 <b>Khắc phục:</b> Vui lòng mở trang <code>https://baocao.ghn.vn/</code> trên trình duyệt để tự động cập nhật Token mới và hệ thống sẽ xuất lại báo cáo ngay!"
+                )
+                try:
+                    url_err = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+                    requests.post(url_err, data={"chat_id": TELEGRAM_CHAT_ID, "text": msg_err, "parse_mode": "HTML"}, timeout=15)
+                except Exception as e_err:
+                    print(f"[WARN] Không thể gửi cảnh báo token hết hạn: {e_err}")
+                return
 
-        truck_data.append({
-            "code": code,
-            "plate": plate if plate else "N/A",
-            "route": rname,
-            "eta": eta_str,
-            "etd": etd_str,
-            "pkgs": dropoff_pkgs_cnt,
-            "bulky": bulky,
-            "bag_unload": bag_unload,
-            "bag_relay": bag_relay,
-            "orders": orders_cnt,
-            "note_shift": t.get("note_shift", "")
-        })
+        ma_to_ten, ten_to_tuyen = load_dictionaries(shift=shift_code)
+        processed_orders, summary_routes, bc_orders = process_orders(orders_rows, ma_to_ten, ten_to_tuyen, shift=shift_code)
 
-    # 1. Render ảnh tổng quan trước
-    out_img = BASE_DIR / f"SL_BD_{shift_code}_overview.png"
-    render_overview_image(summary_routes, bc_orders, shift=shift_code, out_path=out_img)
+        valid_route_names = set(s['tuyen'] for s in summary_routes)
+        pkg_to_valid_orders_cnt = {}
+        for ord_item in processed_orders:
+            if ord_item['tuyen'] in valid_route_names:
+                pkg_code = ord_item['package']
+                pkg_to_valid_orders_cnt[pkg_code] = pkg_to_valid_orders_cnt.get(pkg_code, 0) + 1
 
-    total_table_1 = sum(s['so_don'] for s in summary_routes if s['tuyen'] != "GHN HOÀI NHƠN" or s['so_don'] > 0)
-    if is_ca2:
-        bd_total = sum(s['so_don'] for s in summary_routes if s['tuyen'] in ['BĐ 02', 'BĐ 06', 'BĐ 12', 'GL 05'])
-        py_total = total_table_1 - bd_total
-    else:
-        bd_total = sum(s['so_don'] for s in summary_routes if any(k in s['tuyen'] for k in ['BĐ 0', 'BĐ 1', 'BD 1', 'DN', 'GL']))
-        py_total = total_table_1 - bd_total
+        truck_data = []
+        for t, eta, pkg_cnt in valid_matched_trips:
+            code = t.get("partnerTransportationCode")
+            plate = t.get("vehiclePlate") or ""
+            rname = t.get("routeScheduleName") or "N/A"
+            
+            detail_arr, detail_dep, detail_plate = fetch_trip_stop_times(code, sso_token)
+            if detail_plate:
+                plate = detail_plate
+            
+            eta_dt = detail_arr if detail_arr else eta
+            etd_dt = detail_dep
 
-    # Gửi ảnh và danh sách xe trục lên Telegram NGAY LẬP TỨC
-    print("📤 Đang gửi ảnh tổng quan và danh sách xe trục lên Telegram...")
-    send_telegram_photo_and_trucks(
-        shift_label=shift_label,
-        target_date=dt,
-        total_orders=total_table_1,
-        bd_total=bd_total,
-        py_total=py_total,
-        truck_data=truck_data,
-        img_path=str(out_img)
-    )
+            eta_str = eta_dt.strftime("%d/%m %H:%M") if eta_dt else "--"
+            etd_str = etd_dt.strftime("%d/%m %H:%M") if etd_dt else "--"
 
-    # 2. Xuất file Excel nhẹ và gửi tiếp file Excel
-    out_excel = BASE_DIR / f"SL_BD_{shift_code}.xlsx"
-    generate_report_file(processed_orders, summary_routes, bc_orders, shift=shift_code, out_file=out_excel)
+            pkgs = trip_to_pkgs.get(code, set())
+            orders_cnt = sum(pkg_to_valid_orders_cnt.get(p, 0) for p in pkgs)
 
-    if out_excel.exists():
-        try:
-            url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendDocument"
-            with open(out_excel, "rb") as f:
-                caption = f"📁 File chi tiết sản lượng {shift_label}: SL BD {shift_code}.xlsx ({total_table_1:,} đơn)"
-                requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption}, files={"document": f}, timeout=40)
-                print("  ✓ Đã gửi file Excel lên Telegram.")
-        except Exception as e:
-            print(f"  ✗ Lỗi gửi file Excel Telegram: {e}")
+            # Lấy số kiện theo mục CẦN NHẬN (Cồng kềnh, Bao cần rã, Bao chuyển tiếp) của KTC Bình Định
+            w_drop = t.get("willDropOff") or {}
+            bulky = w_drop.get("numOfPkgBulky") or 0
+            bag_unload = w_drop.get("numOfPkg") or w_drop.get("numOfBag") or 0
+            bag_relay = w_drop.get("numOfPkgRelay") or w_drop.get("numOfRelay") or w_drop.get("numOfTransit") or 0
+
+            if w_drop and (bulky > 0 or bag_unload > 0 or bag_relay > 0):
+                dropoff_pkgs_cnt = bulky + bag_unload + bag_relay
+            else:
+                dropoff_pkgs_cnt = len(pkgs)
+
+            truck_data.append({
+                "code": code,
+                "plate": plate if plate else "N/A",
+                "route": rname,
+                "eta": eta_str,
+                "etd": etd_str,
+                "pkgs": dropoff_pkgs_cnt,
+                "bulky": bulky,
+                "bag_unload": bag_unload,
+                "bag_relay": bag_relay,
+                "orders": orders_cnt,
+                "note_shift": t.get("note_shift", "")
+            })
+
+        # 1. Render ảnh tổng quan trước
+        out_img = BASE_DIR / f"SL_BD_{shift_code}_overview.png"
+        render_overview_image(summary_routes, bc_orders, shift=shift_code, out_path=out_img)
+
+        total_table_1 = sum(s['so_don'] for s in summary_routes if s['tuyen'] != "GHN HOÀI NHƠN" or s['so_don'] > 0)
+        if is_ca2:
+            bd_total = sum(s['so_don'] for s in summary_routes if s['tuyen'] in ['BĐ 02', 'BĐ 06', 'BĐ 12', 'GL 05'])
+            py_total = total_table_1 - bd_total
+        else:
+            bd_total = sum(s['so_don'] for s in summary_routes if any(k in s['tuyen'] for k in ['BĐ 0', 'BĐ 1', 'BD 1', 'DN', 'GL']))
+            py_total = total_table_1 - bd_total
+
+        # Gửi ảnh và danh sách xe trục lên Telegram NGAY LẬP TỨC
+        print("📤 Đang gửi ảnh tổng quan và danh sách xe trục lên Telegram...")
+        send_telegram_photo_and_trucks(
+            shift_label=shift_label,
+            target_date=dt,
+            total_orders=total_table_1,
+            bd_total=bd_total,
+            py_total=py_total,
+            truck_data=truck_data,
+            img_path=str(out_img)
+        )
+
+        # Đánh dấu đã gửi thành công hôm nay
+        mark_sl_state(shift_key, today_str, status="completed", orders=total_table_1, trucks=len(truck_data))
+
+        # 2. Xuất file Excel nhẹ và gửi tiếp file Excel
+        out_excel = BASE_DIR / f"SL_BD_{shift_code}.xlsx"
+        generate_report_file(processed_orders, summary_routes, bc_orders, shift=shift_code, out_file=out_excel)
+
+        if out_excel.exists():
+            try:
+                url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendDocument"
+                with open(out_excel, "rb") as f:
+                    caption = f"📁 File chi tiết sản lượng {shift_label}: SL BD {shift_code}.xlsx ({total_table_1:,} đơn)"
+                    requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption}, files={"document": f}, timeout=40)
+                    print("  ✓ Đã gửi file Excel lên Telegram.")
+            except Exception as e:
+                print(f"  ✗ Lỗi gửi file Excel Telegram: {e}")
+    finally:
+        with _PIPELINE_LOCK:
+            _IS_PIPELINE_RUNNING = False
+        import gc
+        gc.collect()
 
 def send_telegram_photo_and_trucks(shift_label, target_date, total_orders, bd_total, py_total, truck_data, img_path):
     bot_token = TELEGRAM_BOT_TOKEN
@@ -802,47 +876,49 @@ def run_sl_scheduler():
     print("   • Ca Sáng: Gửi cố định lúc 07:00 sáng hàng ngày (Kiểm tra sớm lúc 06:15)")
     print("   • Ca Đêm:  Gửi cố định lúc 15:00 chiều hàng ngày (Kiểm tra sớm lúc 14:15)")
     print("   • Tự động làm mới Metabase JWT định kỳ mỗi 4 tiếng")
-
-    last_run_day_sang = -1
-    last_run_day_dem = -1
-    last_precheck_sang = -1
-    last_precheck_dem = -1
-    last_periodic_refresh_hour = -1
+    print("   • Khóa chống trùng lặp vĩnh viễn (sl_run_state.json)")
 
     while True:
         try:
             now = datetime.now(VN_TZ)
-            cur_day = now.day
+            today_str = now.strftime("%Y-%m-%d")
             hour = now.hour
             minute = now.minute
 
             # 1. Tự động làm mới Metabase JWT mỗi 4 tiếng (02:00, 06:00, 10:00, 14:00, 18:00, 22:00)
-            if hour % 4 == 2 and 0 <= minute <= 5 and last_periodic_refresh_hour != hour:
-                last_periodic_refresh_hour = hour
-                try:
-                    get_metabase_jwt(force_refresh=True)
-                except Exception as e_ref:
-                    print(f"[WARN] Lỗi định kỳ làm mới Metabase JWT: {e_ref}")
+            if hour % 4 == 2 and 0 <= minute <= 5:
+                refresh_key = f"{today_str}_{hour}"
+                state = get_sl_state()
+                if state.get("last_jwt_refresh") != refresh_key:
+                    mark_sl_state("last_jwt_refresh", refresh_key, status="completed")
+                    try:
+                        get_metabase_jwt(force_refresh=True)
+                    except Exception as e_ref:
+                        print(f"[WARN] Lỗi định kỳ làm mới Metabase JWT: {e_ref}")
 
             # 2. Kiểm tra sớm trước Ca Sáng (06:15 - trước ca 45 phút)
-            if hour == 6 and 15 <= minute <= 20 and last_precheck_sang != cur_day:
-                last_precheck_sang = cur_day
-                pre_flight_token_check(shift_name="ca_sang")
+            if hour == 6 and 15 <= minute <= 45:
+                if not is_already_run_today("precheck_sang", today_str):
+                    mark_sl_state("precheck_sang", today_str, status="completed")
+                    pre_flight_token_check(shift_name="ca_sang")
 
-            # 3. 07:00 -> Chạy báo cáo Ca Sáng (chỉ kích hoạt trong 5 phút đầu 07:00 - 07:05)
-            if hour == 7 and 0 <= minute <= 5 and last_run_day_sang != cur_day:
-                last_run_day_sang = cur_day
-                run_pipeline(shift="ca_sang")
+            # 3. 07:00 -> Chạy báo cáo Ca Sáng (từ 07:00 đến 07:15)
+            if (hour == 7 and 0 <= minute <= 15):
+                if not is_already_run_today("ca_sang", today_str):
+                    print(f"🚀 [SCHEDULER] Kích hoạt báo cáo Ca Sáng ngày {today_str}...")
+                    run_pipeline(shift="ca_sang")
 
             # 4. Kiểm tra sớm trước Ca Đêm (14:15 - trước ca 45 phút)
-            if hour == 14 and 15 <= minute <= 20 and last_precheck_dem != cur_day:
-                last_precheck_dem = cur_day
-                pre_flight_token_check(shift_name="ca_dem")
+            if hour == 14 and 15 <= minute <= 45:
+                if not is_already_run_today("precheck_dem", today_str):
+                    mark_sl_state("precheck_dem", today_str, status="completed")
+                    pre_flight_token_check(shift_name="ca_dem")
 
-            # 5. 15:00 -> Chạy báo cáo Ca Đêm (chỉ kích hoạt trong 5 phút đầu 15:00 - 15:05)
-            if hour == 15 and 0 <= minute <= 5 and last_run_day_dem != cur_day:
-                last_run_day_dem = cur_day
-                run_pipeline(shift="ca_dem")
+            # 5. 15:00 -> Chạy báo cáo Ca Đêm (từ 15:00 đến 15:15)
+            if (hour == 15 and 0 <= minute <= 15):
+                if not is_already_run_today("ca_dem", today_str):
+                    print(f"🚀 [SCHEDULER] Kích hoạt báo cáo Ca Đêm ngày {today_str}...")
+                    run_pipeline(shift="ca_dem")
         except Exception as e:
             print(f"[ERROR in SL Scheduler]: {e}")
 
