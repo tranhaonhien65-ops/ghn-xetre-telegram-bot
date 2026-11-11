@@ -644,6 +644,16 @@ def run_pipeline(shift="ca1", target_date=None, force=False):
         if not sso_token:
             print("[ERROR] SSO token is missing!")
             mark_sl_state(shift_key, today_str, status="missing_sso")
+            msg_err = (
+                f"⚠️ <b>SỰ CỐ BÁO CÁO SẢN LƯỢNG {shift_label.upper()} ({date_str}):</b>\n"
+                f"Hệ thống không tìm thấy <b>Token SSO GHN</b> để trích xuất dữ liệu chuyến xe.\n\n"
+                f"👉 <b>Cách chỉnh sửa:</b> Vui lòng mở trang <code>https://nhanh.ghn.vn/</code> hoặc <code>https://baocao.ghn.vn/</code> trên trình duyệt để tự động đồng bộ lại Token!"
+            )
+            try:
+                url_err = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+                HTTP_SESSION.post(url_err, data={"chat_id": TELEGRAM_CHAT_ID, "text": msg_err, "parse_mode": "HTML"}, timeout=15)
+            except Exception:
+                pass
             return
 
         print(f"\n=================================================================")
@@ -661,11 +671,11 @@ def run_pipeline(shift="ca1", target_date=None, force=False):
             msg_err = (
                 f"⚠️ <b>CẢNH BÁO BÁO CÁO SẢN LƯỢNG {shift_label.upper()} ({date_str}):</b>\n"
                 f"Hệ thống phát hiện có <b>{len(matched_trips)} chuyến xe trục</b> nhưng không thể quét dữ liệu kiện hàng do <b>Token GHN đã hết hạn (TOKEN_NOT_ALIVE)!</b>\n\n"
-                f"👉 <b>Khắc phục:</b> Vui lòng mở trang <code>https://baocao.ghn.vn/</code> hoặc <code>https://nhanh.ghn.vn/</code> trên trình duyệt để cập nhật Token mới!"
+                f"👉 <b>Cách chỉnh sửa:</b> Vui lòng mở trang <code>https://baocao.ghn.vn/</code> hoặc <code>https://nhanh.ghn.vn/</code> trên trình duyệt để cập nhật Token mới!"
             )
             try:
                 url_err = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-                requests.post(url_err, data={"chat_id": TELEGRAM_CHAT_ID, "text": msg_err, "parse_mode": "HTML"}, timeout=15)
+                HTTP_SESSION.post(url_err, data={"chat_id": TELEGRAM_CHAT_ID, "text": msg_err, "parse_mode": "HTML"}, timeout=15)
             except Exception:
                 pass
             return
@@ -677,6 +687,19 @@ def run_pipeline(shift="ca1", target_date=None, force=False):
             if len(matched_trips) > 0:
                 print("⚠️ Có chuyến xe nhưng không gom được kiện hàng hợp lệ, có thể do lỗi mạng tải TMS history. Thử lại sau.")
                 mark_sl_state(shift_key, today_str, status="error_empty_pkgs")
+                now_min = datetime.now(VN_TZ).minute
+                # Cảnh báo lên nhóm nếu sau 10 phút vẫn chưa lấy được kiện
+                if now_min >= 10:
+                    msg_warn = (
+                        f"⚠️ <b>CẢNH BÁO TIẾN TRÌNH {shift_label.upper()} ({date_str}):</b>\n"
+                        f"Phát hiện có <b>{len(matched_trips)} xe trục</b> nhưng hệ thống gặp sự cố mạng khi kết nối cổng TMS để gom mã kiện.\n\n"
+                        f"🔄 Bot đang tự động thử lại sau mỗi 2 phút..."
+                    )
+                    try:
+                        url_err = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+                        HTTP_SESSION.post(url_err, data={"chat_id": TELEGRAM_CHAT_ID, "text": msg_warn, "parse_mode": "HTML"}, timeout=15)
+                    except Exception:
+                        pass
                 return
             orders_rows = []
         else:
@@ -688,11 +711,11 @@ def run_pipeline(shift="ca1", target_date=None, force=False):
                 msg_err = (
                     f"⚠️ <b>CẢNH BÁO BÁO CÁO SẢN LƯỢNG {shift_label.upper()} ({date_str}):</b>\n"
                     f"Hệ thống đã gom được <b>{len(valid_matched_trips)} xe trục ({len(packages):,} kiện)</b> nhưng không thể truy vấn số đơn từ Metabase do <b>Token GHN / Báo Cáo đã hết hạn!</b>\n\n"
-                    f"👉 <b>Khắc phục:</b> Vui lòng mở trang <code>https://baocao.ghn.vn/</code> trên trình duyệt để tự động cập nhật Token mới và hệ thống sẽ xuất lại báo cáo ngay!"
+                    f"👉 <b>Cách chỉnh sửa:</b> Vui lòng mở trang <code>https://baocao.ghn.vn/</code> trên trình duyệt để tự động cập nhật Token mới và hệ thống sẽ xuất lại báo cáo ngay!"
                 )
                 try:
                     url_err = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-                    requests.post(url_err, data={"chat_id": TELEGRAM_CHAT_ID, "text": msg_err, "parse_mode": "HTML"}, timeout=15)
+                    HTTP_SESSION.post(url_err, data={"chat_id": TELEGRAM_CHAT_ID, "text": msg_err, "parse_mode": "HTML"}, timeout=15)
                 except Exception as e_err:
                     print(f"[WARN] Không thể gửi cảnh báo token hết hạn: {e_err}")
                 return
@@ -787,10 +810,24 @@ def run_pipeline(shift="ca1", target_date=None, force=False):
                 url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendDocument"
                 with open(out_excel, "rb") as f:
                     caption = f"📁 File chi tiết sản lượng {shift_label}: SL BD {shift_code}.xlsx ({total_table_1:,} đơn)"
-                    requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption}, files={"document": f}, timeout=40)
+                    HTTP_SESSION.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption}, files={"document": f}, timeout=40)
                     print("  ✓ Đã gửi file Excel lên Telegram.")
             except Exception as e:
                 print(f"  ✗ Lỗi gửi file Excel Telegram: {e}")
+    except Exception as e_pipe:
+        print(f"[FATAL in run_pipeline]: {e_pipe}")
+        mark_sl_state(shift_key, today_str, status="error", error=str(e_pipe))
+        import html
+        msg_err = (
+            f"⚠️ <b>SỰ CỐ TẠO BÁO CÁO SẢN LƯỢNG {shift_label.upper()} ({date_str}):</b>\n"
+            f"Chi tiết: <code>{html.escape(str(e_pipe))}</code>\n\n"
+            f"🔄 Bot sẽ tự động thử lại sau 2 phút trong khung giờ chạy. Nếu lỗi vẫn tiếp diễn, vui lòng kiểm tra lại hệ thống!"
+        )
+        try:
+            url_err = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+            HTTP_SESSION.post(url_err, data={"chat_id": TELEGRAM_CHAT_ID, "text": msg_err, "parse_mode": "HTML"}, timeout=15)
+        except Exception:
+            pass
     finally:
         with _PIPELINE_LOCK:
             _IS_PIPELINE_RUNNING = False
@@ -808,7 +845,7 @@ def send_telegram_photo_and_trucks(shift_label, target_date, total_orders, bd_to
             caption_photo = f"📊 <b>BẢNG TỔNG QUAN SẢN LƯỢNG KTC BÌNH ĐỊNH - {shift_label.upper()} ({date_str})</b>\n📦 Tổng đơn: <b>{total_orders:,} đơn</b> (Bình Định: <b>{bd_total:,}</b> | Phú Yên: <b>{py_total:,}</b>)"
             url = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
             with open(img_path, "rb") as f:
-                r = requests.post(url, data={"chat_id": chat_id, "caption": caption_photo, "parse_mode": "HTML"}, files={"photo": f}, timeout=30)
+                r = HTTP_SESSION.post(url, data={"chat_id": chat_id, "caption": caption_photo, "parse_mode": "HTML"}, files={"photo": f}, timeout=30)
                 print("  ✓ Đã gửi ảnh tổng quan sản lượng lên Telegram.")
         except Exception as e:
             print(f"  ✗ Lỗi gửi ảnh Telegram: {e}")
@@ -859,7 +896,7 @@ def send_telegram_photo_and_trucks(shift_label, target_date, total_orders, bd_to
 
         truck_msg = "\n".join(lines)
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        requests.post(url, data={"chat_id": chat_id, "text": truck_msg, "parse_mode": "HTML"}, timeout=15)
+        HTTP_SESSION.post(url, data={"chat_id": chat_id, "text": truck_msg, "parse_mode": "HTML"}, timeout=15)
         print("  ✓ Đã gửi danh sách xe trục lên Telegram.")
     except Exception as e:
         print(f"  ✗ Lỗi gửi danh sách xe trục Telegram: {e}")
