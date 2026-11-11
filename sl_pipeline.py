@@ -39,7 +39,7 @@ def is_already_run_today(shift_key, today_str):
             return True
         if item.get("date") == today_str and item.get("status") == "running":
             started_at = item.get("started_at", 0)
-            if time.time() - started_at < 300:
+            if time.time() - started_at < 180:
                 return True
     return False
 
@@ -164,7 +164,7 @@ def fetch_trip_stop_info(code, sso_token, target_eta=None):
     }
     url = f"https://inside-prd-api.ghn.vn/tms/v1/transportation/detail?code={code}&status=SEARCH&locationId=20335000&locationType=GHN_HUB"
     try:
-        r = requests.get(url, headers=headers, timeout=8)
+        r = requests.get(url, headers=headers, timeout=4)
         data = r.json()
         trip_data = data.get("data", [{}])[0]
         plate = trip_data.get("partnerVehicleNumber", "")
@@ -344,7 +344,7 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
         # 1. Tra cứu trực tiếp từ TMS detail API (lộ trình routes[0] là kho xuất phát đầu tiên)
         url_detail = f"https://inside-prd-api.ghn.vn/tms/v1/transportation/detail?code={code}&status=SEARCH&locationId=20335000&locationType=GHN_HUB"
         try:
-            r = requests.get(url_detail, headers=headers, timeout=8)
+            r = requests.get(url_detail, headers=headers, timeout=4)
             d = r.json().get("data", [{}])[0]
             routes = d.get("routes", [])
             if routes:
@@ -358,7 +358,7 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
         q_param = json.dumps({"transportationCode": code})
         url_hist = f"https://inside-prd-api.ghn.vn/lms/v1/tms-history?q={requests.utils.quote(q_param)}&offset=0&limit=50&locationId=20335000&locationType=GHN_HUB&source=INSIDE_WEB_APP/ktc-van-tai/transport/detail"
         try:
-            r = requests.get(url_hist, headers=headers, timeout=8)
+            r = requests.get(url_hist, headers=headers, timeout=4)
             d_hist = r.json().get("data", [])
             if d_hist:
                 d_hist.sort(key=lambda x: x.get("actionTime") or "")
@@ -382,7 +382,10 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
             vn_dt = parse_iso_dt(eta_str)
             if not vn_dt:
                 continue
-            
+
+            if vn_dt < rollover_start or vn_dt > (shift_std_end + timedelta(hours=6)):
+                continue
+
             matched = False
             note_shift = ""
 
@@ -400,29 +403,20 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
                 # Xe có lịch dự kiến trước ca này (bị trễ giờ)
                 # CHỈ được tính dồn sang ca hiện tại nếu:
                 # 1. Xe THỰC SỰ ĐANG TRÊN ĐƯỜNG tới (nằm trong live_upcoming_codes của API hiện tại)
-                # 2. Hoặc xe có thời gian thực tế đến kho trong ca này (actualArrivalTime >= shift_std_start)
                 if code in live_upcoming_codes:
-                    if rollover_start <= vn_dt:
-                        matched = True
-                        note_shift = "Trễ từ Ca trước sang"
-                else:
+                    matched = True
+                    note_shift = "Trễ từ Ca trước sang"
+                elif code in live_arrived_codes:
+                    # 2. Hoặc xe thực tế vừa đến kho trong ca này
                     arr_time = t.get("arrivalTime")
-                    if not arr_time:
-                        stop_info = fetch_trip_stop_info(code, sso_token, target_eta=vn_dt)
-                        if stop_info:
-                            if stop_info.get("act_arr_dt"):
-                                arr_time = stop_info["act_arr_dt"].isoformat()
-                                t["arrivalTime"] = arr_time
-                            if stop_info.get("act_dep_dt"):
-                                t["departureTime"] = stop_info["act_dep_dt"].isoformat()
-                            if stop_info.get("status") == "COMPLETED":
-                                t["tab"] = "Đã rời kho"
-
                     if arr_time:
                         arr_vn = parse_iso_dt(arr_time)
                         if arr_vn and arr_vn >= shift_std_start:
                             matched = True
                             note_shift = "Trễ từ Ca trước sang"
+                else:
+                    # Xe cũ đã hoàn thành/rời kho từ ca trước, bỏ qua ngay!
+                    continue
 
             if matched:
                 code = t.get("partnerTransportationCode")
@@ -902,8 +896,8 @@ def run_sl_scheduler():
                     mark_sl_state("precheck_sang", today_str, status="completed")
                     pre_flight_token_check(shift_name="ca_sang")
 
-            # 3. 07:00 -> Chạy báo cáo Ca Sáng (từ 07:00 đến 07:15)
-            if (hour == 7 and 0 <= minute <= 15):
+            # 3. 07:00 -> Chạy báo cáo Ca Sáng (từ 07:00 đến 07:30)
+            if (hour == 7 and 0 <= minute <= 30):
                 if not is_already_run_today("ca_sang", today_str):
                     print(f"🚀 [SCHEDULER] Kích hoạt báo cáo Ca Sáng ngày {today_str}...")
                     run_pipeline(shift="ca_sang")
@@ -914,8 +908,8 @@ def run_sl_scheduler():
                     mark_sl_state("precheck_dem", today_str, status="completed")
                     pre_flight_token_check(shift_name="ca_dem")
 
-            # 5. 15:00 -> Chạy báo cáo Ca Đêm (từ 15:00 đến 15:15)
-            if (hour == 15 and 0 <= minute <= 15):
+            # 5. 15:00 -> Chạy báo cáo Ca Đêm (từ 15:00 đến 15:30)
+            if (hour == 15 and 0 <= minute <= 30):
                 if not is_already_run_today("ca_dem", today_str):
                     print(f"🚀 [SCHEDULER] Kích hoạt báo cáo Ca Đêm ngày {today_str}...")
                     run_pipeline(shift="ca_dem")
