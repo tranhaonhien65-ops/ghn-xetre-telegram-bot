@@ -10,7 +10,7 @@ from config import get_ghn_token
 API_URL = "https://truck-gw.ghn.vn/api/v1/staff/trip/find_trip"
 VN_TZ = timezone(timedelta(hours=7))
 
-def fetch_trips_page(token: str, page: int = 1, retries: int = 2) -> Tuple[Optional[dict], Optional[str], bool]:
+def fetch_trips_page(token: str, page: int = 1, retries: int = 3) -> Tuple[Optional[dict], Optional[str], bool]:
     """
     Fetches a single page of active trips from GHN API with 7-day date filter (identical to web UI).
     """
@@ -47,7 +47,7 @@ def fetch_trips_page(token: str, page: int = 1, retries: int = 2) -> Tuple[Optio
         req = urllib.request.Request(API_URL, data=data_bytes, headers=headers, method="PATCH")
         
         try:
-            with urllib.request.urlopen(req, context=ctx, timeout=25) as response:
+            with urllib.request.urlopen(req, context=ctx, timeout=30) as response:
                 res_body = response.read().decode("utf-8")
                 return json.loads(res_body), None, False
         except urllib.error.HTTPError as e:
@@ -62,7 +62,7 @@ def fetch_trips_page(token: str, page: int = 1, retries: int = 2) -> Tuple[Optio
             return None, f"HTTP Error {e.code}: {e.reason}", False
         except Exception as e:
             if attempt < retries - 1:
-                time.sleep(2)
+                time.sleep(3)
                 continue
             return None, f"Lỗi kết nối mạng: {str(e)}", False
             

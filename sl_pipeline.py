@@ -7,6 +7,8 @@ import requests
 import threading
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 BASE_DIR = Path(__file__).resolve().parent
 SSO_TOKEN_FILE = BASE_DIR / "ghn_sso_token.txt"
@@ -18,6 +20,21 @@ VN_TZ = timezone(timedelta(hours=7))
 
 _PIPELINE_LOCK = threading.Lock()
 _IS_PIPELINE_RUNNING = False
+
+def _create_http_session():
+    s = requests.Session()
+    retries = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[500, 502, 503, 504],
+        raise_on_status=False
+    )
+    adapter = HTTPAdapter(max_retries=retries, pool_connections=20, pool_maxsize=30)
+    s.mount("https://", adapter)
+    s.mount("http://", adapter)
+    return s
+
+HTTP_SESSION = _create_http_session()
 
 def get_sl_state():
     if SL_STATE_FILE.exists():
@@ -42,6 +59,11 @@ def is_already_run_today(shift_key, today_str):
         if item.get("date") == today_str and item.get("status") == "running":
             started_at = item.get("started_at", 0)
             if time.time() - started_at < 180:
+                return True
+        # Nếu gặp lỗi mạng / rỗng kiện trước đó, chờ 120s cooldown rồi cho phép thử lại tự động
+        if item.get("date") == today_str and item.get("status") in ("error_empty_pkgs", "token_expired", "error"):
+            started_at = item.get("started_at", 0)
+            if time.time() - started_at < 120:
                 return True
     return False
 
@@ -142,7 +164,7 @@ def get_metabase_jwt(force_refresh=False):
                 "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
             }
             payload = {"user_id": 3007413, "dashboard_id": 221}
-            r = requests.post(url, json=payload, headers=headers, timeout=10)
+            r = HTTP_SESSION.post(url, json=payload, headers=headers, timeout=(6, 15))
             d = r.json()
             new_jwt = d.get("data", {}).get("token")
             if new_jwt:
@@ -166,7 +188,7 @@ def fetch_trip_stop_info(code, sso_token, target_eta=None):
     }
     url = f"https://inside-prd-api.ghn.vn/tms/v1/transportation/detail?code={code}&status=SEARCH&locationId=20335000&locationType=GHN_HUB"
     try:
-        r = requests.get(url, headers=headers, timeout=4)
+        r = HTTP_SESSION.get(url, headers=headers, timeout=(6, 12))
         data = r.json()
         trip_data = data.get("data", [{}])[0]
         plate = trip_data.get("partnerVehicleNumber", "")
@@ -278,44 +300,54 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
 
     # 1. Xe sắp đến kho (trên đường tới)
     url_up = "https://inside-prd-api.ghn.vn/tms/v1/transportation/get-upcoming-transports"
-    try:
-        r = requests.post(url_up, json=payload, headers=headers, timeout=12)
-        res = r.json()
-        data_field = res.get("data")
-        trips = data_field[0].get("list", []) if isinstance(data_field, list) and data_field else []
-        for t in trips:
-            code = t.get("partnerTransportationCode")
-            if code and code not in seen_codes:
-                seen_codes.add(code)
-                live_upcoming_codes.add(code)
-                t["tab"] = "Sắp đến kho"
-                all_raw_trips.append(t)
-    except Exception as e:
-        print(f"[WARN] Lỗi khi gọi get-upcoming-transports: {e}")
+    for attempt in range(2):
+        try:
+            r = HTTP_SESSION.post(url_up, json=payload, headers=headers, timeout=(10, 25))
+            res = r.json()
+            data_field = res.get("data")
+            trips = data_field[0].get("list", []) if isinstance(data_field, list) and data_field else []
+            for t in trips:
+                code = t.get("partnerTransportationCode")
+                if code and code not in seen_codes:
+                    seen_codes.add(code)
+                    live_upcoming_codes.add(code)
+                    t["tab"] = "Sắp đến kho"
+                    all_raw_trips.append(t)
+            break
+        except Exception as e:
+            if attempt == 0:
+                time.sleep(2)
+                continue
+            print(f"[WARN] Lỗi khi gọi get-upcoming-transports: {e}")
 
     # 2. Xe đã đến kho
     url_arr = "https://inside-prd-api.ghn.vn/tms/v1/transportation/get-arrived-transports"
-    try:
-        r = requests.post(url_arr, json=payload, headers=headers, timeout=12)
-        res = r.json()
-        data_field = res.get("data")
-        trips = data_field[0].get("list", []) if isinstance(data_field, list) and data_field else []
-        for t in trips:
-            code = t.get("partnerTransportationCode")
-            if code:
-                live_arrived_codes.add(code)
-                if code not in seen_codes:
-                    seen_codes.add(code)
-                    t["tab"] = "Đã đến kho"
-                    all_raw_trips.append(t)
-                else:
-                    for ex in all_raw_trips:
-                        if ex.get("partnerTransportationCode") == code:
-                            ex["tab"] = "Đã đến kho"
-                            if t.get("arrivalTime"):
-                                ex["arrivalTime"] = t.get("arrivalTime")
-    except Exception as e:
-        print(f"[WARN] Lỗi khi gọi get-arrived-transports: {e}")
+    for attempt in range(2):
+        try:
+            r = HTTP_SESSION.post(url_arr, json=payload, headers=headers, timeout=(10, 25))
+            res = r.json()
+            data_field = res.get("data")
+            trips = data_field[0].get("list", []) if isinstance(data_field, list) and data_field else []
+            for t in trips:
+                code = t.get("partnerTransportationCode")
+                if code:
+                    live_arrived_codes.add(code)
+                    if code not in seen_codes:
+                        seen_codes.add(code)
+                        t["tab"] = "Đã đến kho"
+                        all_raw_trips.append(t)
+                    else:
+                        for ex in all_raw_trips:
+                            if ex.get("partnerTransportationCode") == code:
+                                ex["tab"] = "Đã đến kho"
+                                if t.get("arrivalTime"):
+                                    ex["arrivalTime"] = t.get("arrivalTime")
+            break
+        except Exception as e:
+            if attempt == 0:
+                time.sleep(2)
+                continue
+            print(f"[WARN] Lỗi khi gọi get-arrived-transports: {e}")
 
     # Đồng bộ với bộ nhớ đệm cache chuyến đi trong ngày (tránh mất các xe đã rời kho)
     cached_trips = load_cached_trips()
@@ -346,7 +378,7 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
         # 1. Tra cứu trực tiếp từ TMS detail API (lộ trình routes[0] là kho xuất phát đầu tiên)
         url_detail = f"https://inside-prd-api.ghn.vn/tms/v1/transportation/detail?code={code}&status=SEARCH&locationId=20335000&locationType=GHN_HUB"
         try:
-            r = requests.get(url_detail, headers=headers, timeout=4)
+            r = HTTP_SESSION.get(url_detail, headers=headers, timeout=(6, 12))
             d = r.json().get("data", [{}])[0]
             routes = d.get("routes", [])
             if routes:
@@ -360,7 +392,7 @@ def fetch_trips_for_shift(shift="ca_dem", target_date=None, sso_token=None):
         q_param = json.dumps({"transportationCode": code})
         url_hist = f"https://inside-prd-api.ghn.vn/lms/v1/tms-history?q={requests.utils.quote(q_param)}&offset=0&limit=50&locationId=20335000&locationType=GHN_HUB&source=INSIDE_WEB_APP/ktc-van-tai/transport/detail"
         try:
-            r = requests.get(url_hist, headers=headers, timeout=4)
+            r = HTTP_SESSION.get(url_hist, headers=headers, timeout=(6, 12))
             d_hist = r.json().get("data", [])
             if d_hist:
                 d_hist.sort(key=lambda x: x.get("actionTime") or "")
@@ -474,22 +506,32 @@ def extract_packages_for_trips(trips_list, sso_token):
         while True:
             q_param = json.dumps({"transportationCode": code})
             url = f"https://inside-prd-api.ghn.vn/lms/v1/tms-history?q={requests.utils.quote(q_param)}&offset={offset}&limit={limit}&locationId=20335000&locationType=GHN_HUB&source=INSIDE_WEB_APP/ktc-van-tai/transport/detail"
-            try:
-                r = requests.get(url, headers=headers, timeout=15)
-                if r.status_code == 401 or "TOKEN_NOT_ALIVE" in r.text or "UNAUTHORIZED" in r.text:
-                    print(f"⚠️ [ERROR] SSO Token đã chết khi gọi TMS history cho {code}!")
-                    raise PermissionError("SSO Token hết hạn (TOKEN_NOT_ALIVE)")
-                data = r.json().get("data", [])
-                if not data:
+            success_fetch = False
+            for fetch_try in range(2):
+                try:
+                    r = HTTP_SESSION.get(url, headers=headers, timeout=(8, 20))
+                    if r.status_code == 401 or "TOKEN_NOT_ALIVE" in r.text or "UNAUTHORIZED" in r.text:
+                        print(f"⚠️ [ERROR] SSO Token đã chết khi gọi TMS history cho {code}!")
+                        raise PermissionError("SSO Token hết hạn (TOKEN_NOT_ALIVE)")
+                    data = r.json().get("data", [])
+                    if not data:
+                        success_fetch = True
+                        break
+                    all_events.extend(data)
+                    success_fetch = True
+                    if len(data) < limit:
+                        break
+                    offset += limit
                     break
-                all_events.extend(data)
-                if len(data) < limit:
+                except PermissionError:
+                    raise
+                except Exception as e_hist:
+                    if fetch_try == 0:
+                        time.sleep(1.5)
+                        continue
+                    print(f"[WARN] Lỗi tải TMS history cho {code}: {e_hist}")
                     break
-                offset += limit
-            except PermissionError:
-                raise
-            except Exception as e_hist:
-                print(f"[WARN] Lỗi tải TMS history cho {code}: {e_hist}")
+            if not success_fetch:
                 break
 
         if not all_events:
@@ -554,12 +596,12 @@ def fetch_metabase_orders(packages, jwt_token=None):
         url = f"https://data-bi.ghn.vn/api/embed/dashboard/{jwt_token}/dashcard/3090/card/2738?parameters=%7B%22m%25C3%25A3_ki%25E1%25BB%2587n%22%3A{p_val}%7D"
         
         try:
-            r = requests.get(url, headers=headers, timeout=60)
+            r = HTTP_SESSION.get(url, headers=headers, timeout=(10, 60))
             if r.status_code in (400, 401) and ("expired" in r.text.lower() or "token" in r.text.lower() or r.status_code == 401):
                 print("⚠️ [Metabase] Token hết hạn (400/401), đang tự động làm mới qua phiên Báo Cáo...")
                 jwt_token = get_metabase_jwt(force_refresh=True)
                 url = f"https://data-bi.ghn.vn/api/embed/dashboard/{jwt_token}/dashcard/3090/card/2738?parameters=%7B%22m%25C3%25A3_ki%25E1%25BB%2587n%22%3A{p_val}%7D"
-                r = requests.get(url, headers=headers, timeout=60)
+                r = HTTP_SESSION.get(url, headers=headers, timeout=(10, 60))
             res = r.json()
             rows = res.get("data", {}).get("rows", [])
             all_rows.extend(rows)
@@ -867,7 +909,7 @@ def pre_flight_token_check(shift_name="ca_sang"):
         )
         try:
             url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-            requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": msg_alert, "parse_mode": "HTML"}, timeout=15)
+            HTTP_SESSION.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": msg_alert, "parse_mode": "HTML"}, timeout=15)
             print(f"⚠️ [PRE-FLIGHT] Đã gửi cảnh báo sớm trước {shift_label} lên Telegram!")
         except Exception as e_send:
             print(f"[WARN] Lỗi gửi cảnh báo pre-flight: {e_send}")
@@ -905,8 +947,8 @@ def run_sl_scheduler():
                     mark_sl_state("precheck_sang", today_str, status="completed")
                     pre_flight_token_check(shift_name="ca_sang")
 
-            # 3. 07:00 -> Chạy báo cáo Ca Sáng (từ 07:00 đến 07:30)
-            if (hour == 7 and 0 <= minute <= 30):
+            # 3. 07:00 -> Chạy báo cáo Ca Sáng (từ 07:00 đến 07:45)
+            if (hour == 7 and 0 <= minute <= 45):
                 if not is_already_run_today("ca_sang", today_str):
                     print(f"🚀 [SCHEDULER] Kích hoạt báo cáo Ca Sáng ngày {today_str}...")
                     run_pipeline(shift="ca_sang")
@@ -917,8 +959,8 @@ def run_sl_scheduler():
                     mark_sl_state("precheck_dem", today_str, status="completed")
                     pre_flight_token_check(shift_name="ca_dem")
 
-            # 5. 15:00 -> Chạy báo cáo Ca Đêm (từ 15:00 đến 15:30)
-            if (hour == 15 and 0 <= minute <= 30):
+            # 5. 15:00 -> Chạy báo cáo Ca Đêm (từ 15:00 đến 15:45)
+            if (hour == 15 and 0 <= minute <= 45):
                 if not is_already_run_today("ca_dem", today_str):
                     print(f"🚀 [SCHEDULER] Kích hoạt báo cáo Ca Đêm ngày {today_str}...")
                     run_pipeline(shift="ca_dem")
