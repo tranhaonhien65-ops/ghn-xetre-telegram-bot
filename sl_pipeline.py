@@ -5,6 +5,7 @@ import ssl
 import time
 import requests
 import threading
+from urllib.parse import urlparse
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from requests.adapters import HTTPAdapter
@@ -21,8 +22,49 @@ VN_TZ = timezone(timedelta(hours=7))
 _PIPELINE_LOCK = threading.Lock()
 _IS_PIPELINE_RUNNING = False
 
+FALLBACK_PROXIES = [
+    "4.144.146.21:80",
+    "185.194.121.232:8085"
+]
+_GHN_PROXY = "4.144.146.21:80"
+
+class SmartSession(requests.Session):
+    def request(self, method, url, **kwargs):
+        global _GHN_PROXY
+        parsed = urlparse(url)
+        is_ghn = "ghn.vn" in (parsed.netloc or "")
+
+        # Nếu không phải GHN (ví dụ Telegram), ưu tiên gọi trực tiếp trước
+        if not is_ghn:
+            try:
+                return super().request(method, url, **kwargs)
+            except Exception:
+                pass
+
+        # Với GHN (hoặc khi Telegram trực tiếp lỗi), kết nối qua Proxy để tránh chặn IP Datacenter
+        if _GHN_PROXY:
+            kwargs["proxies"] = {"http": f"http://{_GHN_PROXY}", "https": f"http://{_GHN_PROXY}"}
+            try:
+                return super().request(method, url, **kwargs)
+            except Exception as e:
+                _GHN_PROXY = None
+
+        # Thử qua các proxy dự phòng
+        for p in FALLBACK_PROXIES:
+            kwargs["proxies"] = {"http": f"http://{p}", "https": f"http://{p}"}
+            try:
+                resp = super().request(method, url, **kwargs)
+                _GHN_PROXY = p
+                return resp
+            except Exception:
+                continue
+
+        # Cuối cùng thử trực tiếp
+        kwargs.pop("proxies", None)
+        return super().request(method, url, **kwargs)
+
 def _create_http_session():
-    s = requests.Session()
+    s = SmartSession()
     retries = Retry(
         total=3,
         backoff_factor=1,
