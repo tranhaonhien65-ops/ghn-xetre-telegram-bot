@@ -333,9 +333,13 @@ def keep_awake_pinger():
         time.sleep(600)  # Ping every 10 minutes (Render sleeps after 15m)
 
 def run_cloud():
-    # 1. Start background Bot thread (Báo xe trễ)
-    bot_thread = threading.Thread(target=run_bot, daemon=True)
-    bot_thread.start()
+    cfg = load_config()
+    # 1. Start background Bot thread (Báo xe trễ) if enabled
+    if cfg.get("BOT_ENABLED", False) and cfg.get("BOT_TOKEN"):
+        bot_thread = threading.Thread(target=run_bot, daemon=True)
+        bot_thread.start()
+    else:
+        print("🛑 [CLOUD] Bot giám sát xe trễ đã được tắt / hủy bỏ theo yêu cầu.")
 
     # 2. Start keep-awake self-pinger
     pinger_thread = threading.Thread(target=keep_awake_pinger, daemon=True)

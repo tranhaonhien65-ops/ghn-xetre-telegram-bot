@@ -8,17 +8,14 @@ BOT_TOKEN_FILE = BASE_DIR / "bot_token.txt"
 STATE_FILE = BASE_DIR / "bot_state.json"
 CONFIG_FILE = BASE_DIR / "config.json"
 
-FALLBACK_BOT_TOKEN_B64 = "ODg3MzY3MzExMjpBQUVUVTh4N3c3cS1vUWlEWU4zd0x4dVFXTFZrbEJGSzU4MA=="
+FALLBACK_BOT_TOKEN_B64 = ""
 
 def get_fallback_bot_token() -> str:
-    try:
-        import base64
-        return base64.b64decode(FALLBACK_BOT_TOKEN_B64).decode("utf-8").strip()
-    except Exception:
-        return ""
+    return ""
 
 DEFAULT_CONFIG = {
-    "BOT_TOKEN": os.environ.get("BOT_TOKEN", "") or get_fallback_bot_token(),
+    "BOT_TOKEN": os.environ.get("BOT_TOKEN", ""),
+    "BOT_ENABLED": False,
     "GROUP_ID": int(os.environ.get("GROUP_ID", -1004334734205)),
     "POLL_INTERVAL_SECONDS": 60,
     "DELAY_THRESHOLD_MINUTES": 1,
