@@ -1006,15 +1006,42 @@ def get_upcoming_trucks_summary(max_items=20):
     except Exception as e:
         return f"❌ <b>Lỗi kết nối cổng TMS GHN:</b> {e}"
 
-    if not trips:
-        return "✅ <b>Hiện không có xe trục nào đang trên đường về KTC Bình Định.</b>\n(Tất cả các chuyến xe theo lịch trình đều đã cập kho an toàn! 🚚✨)"
+    # Lọc ĐÚNG XE TRỤC (Linehaul: HN, HY, HCM, DN, GL hoặc xe điều động/tăng cường từ các hub lớn)
+    linehaul_prefixes = ("HY", "HN", "HCM", "DN", "GL")
+    linehaul_trips = []
+    for t in trips:
+        r_name = (t.get("routeScheduleName") or "").strip().upper()
+        # Bỏ qua tuyệt đối xe vệ tinh / nội vùng BD, BD_PY, GHL
+        if r_name.startswith(("BD_", "BD__", "BD_PY_", "GHL_", "BĐ_", "BĐ__", "BĐ_PY_")):
+            continue
+        # Tuyến trục chuẩn
+        if any(r_name.startswith(p) for p in linehaul_prefixes):
+            linehaul_trips.append(t)
+        elif not r_name:
+            # Xe tăng cường không tên tuyến: kiểm tra kho xuất phát
+            code = t.get("partnerTransportationCode")
+            url_detail = f"https://inside-prd-api.ghn.vn/tms/v1/transportation/detail?code={code}&status=SEARCH&locationId=20335000&locationType=GHN_HUB"
+            try:
+                r_d = HTTP_SESSION.get(url_detail, headers=headers, timeout=(3, 6))
+                d = r_d.json().get("data", [{}])[0]
+                routes = d.get("routes", [])
+                if routes:
+                    orig = routes[0].get("locationName", "").upper()
+                    if any(k in orig for k in ["HƯNG YÊN", "HUNG YEN", "HÀ NỘI", "HA NOI", "HỒ CHÍ MINH", "HO CHI MINH", "HCM", "ĐÀ NẴNG", "DA NANG", "GIA LAI", "TÂN BÌNH", "BÌNH TÂN", "LONG AN", "ĐỨC HÒA", "B2B"]):
+                        t["routeScheduleName"] = f"{orig} (Tăng cường)"
+                        linehaul_trips.append(t)
+            except Exception:
+                pass
+
+    if not linehaul_trips:
+        return "✅ <b>Hiện không có xe trục nào đang trên đường về KTC Bình Định.</b>\n(Tất cả xe trục theo lịch trình đều đã cập kho an toàn! 🚚✨)"
 
     lines = [
-        f"🚛 <b>DANH SÁCH XE ĐANG TRÊN ĐƯỜNG VỀ KTC BÌNH ĐỊNH</b>",
-        f"<i>(Tìm thấy {len(trips)} chuyến xe theo lịch trình TMS)</i>",
+        f"🚛 <b>DANH SÁCH XE TRỤC ĐANG TRÊN ĐƯỜNG VỀ KTC BÌNH ĐỊNH</b>",
+        f"<i>(Tìm thấy {len(linehaul_trips)} chuyến xe trục liên tỉnh/liên vùng)</i>",
         "━━━━━━━━━━━━━━━━━━━━"
     ]
-    for i, t in enumerate(trips, 1):
+    for i, t in enumerate(linehaul_trips, 1):
         plate = t.get("vehiclePlate") or "Chưa gán số xe"
         route = t.get("routeScheduleName") or "Không tuyến"
         code = t.get("partnerTransportationCode", "")
