@@ -183,6 +183,15 @@ def fallback_human_chat(user_text: str, user_name: str, trips: List[Dict], delay
     text_clean = user_text.lower().strip()
     name = user_name if user_name else "anh/chị"
     
+    # 0. Tra cứu xe chưa về kho KTC Bình Định
+    upcoming_keywords = ["chưa về", "chua ve", "xe chưa về", "xe chua ve", "chưa tới", "chua toi", "sắp về", "sap ve", "xe nào chưa về", "xe trục chưa về"]
+    if any(k in text_clean for k in upcoming_keywords):
+        try:
+            from sl_pipeline import get_upcoming_trucks_summary
+            return get_upcoming_trucks_summary(max_items=15)
+        except Exception as e:
+            return f"Dạ em đang tra cứu lịch xe về kho mà bị lỗi xíu: {e}. Sếp thử gõ lệnh <code>/chuave</code> giúp em nhé!"
+
     # 1. Tra cứu xe trễ
     delay_keywords = ["trễ", "tre", "muộn", "chậm", "kịp", "xe nào trễ", "có xe trễ", "tình hình trễ"]
     if any(k in text_clean for k in delay_keywords):

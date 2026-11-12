@@ -975,6 +975,75 @@ def send_telegram_photo_and_trucks(shift_label, target_date, total_orders, bd_to
     except Exception as e:
         print(f"  ✗ Lỗi gửi danh sách xe trục Telegram: {e}")
 
+def get_upcoming_trucks_summary(max_items=20):
+    sso = get_sso_token()
+    if not sso:
+        return "❌ <b>Chưa có Token SSO GHN</b> để tra cứu lịch trình TMS.\n💡 Sếp mở web nhanh.ghn.vn trên máy tính để tự động đồng bộ nhé ạ!"
+
+    headers = {
+        "accept": "*/*",
+        "authorization": f"Bearer {sso}",
+        "content-type": "application/json",
+        "origin": "https://nhanh.ghn.vn",
+        "referer": "https://nhanh.ghn.vn/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+    }
+    now = datetime.now(VN_TZ)
+    start_utc = (now - timedelta(hours=12)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    end_utc = (now + timedelta(hours=36)).strftime("%Y-%m-%dT%H:%M:%S.999Z")
+
+    payload = {
+        "offset": 0, "limit": 100, "partnerTransportationCode": "", "vehiclePlate": "",
+        "startTime": start_utc, "endTime": end_utc,
+        "locationId": "20335000", "locationType": "GHN_HUB",
+        "source": "INSIDE_WEB_APP/ktc-van-tai/transport/initialization"
+    }
+
+    url_up = "https://inside-prd-api.ghn.vn/tms/v1/transportation/get-upcoming-transports"
+    try:
+        r = HTTP_SESSION.post(url_up, json=payload, headers=headers, timeout=(10, 25))
+        trips = r.json().get("data", [{}])[0].get("list", [])
+    except Exception as e:
+        return f"❌ <b>Lỗi kết nối cổng TMS GHN:</b> {e}"
+
+    if not trips:
+        return "✅ <b>Hiện không có xe trục nào đang trên đường về KTC Bình Định.</b>\n(Tất cả các chuyến xe theo lịch trình đều đã cập kho an toàn! 🚚✨)"
+
+    lines = [
+        f"🚛 <b>DANH SÁCH XE ĐANG TRÊN ĐƯỜNG VỀ KTC BÌNH ĐỊNH</b>",
+        f"<i>(Tìm thấy {len(trips)} chuyến xe theo lịch trình TMS)</i>",
+        "━━━━━━━━━━━━━━━━━━━━"
+    ]
+    for i, t in enumerate(trips, 1):
+        plate = t.get("vehiclePlate") or "Chưa gán số xe"
+        route = t.get("routeScheduleName") or "Không tuyến"
+        code = t.get("partnerTransportationCode", "")
+        eta_str = t.get("expectedArrivalTime")
+        eta_dt = parse_iso_dt(eta_str) if eta_str else None
+
+        status_txt = ""
+        if eta_dt:
+            diff_min = int((eta_dt - now).total_seconds() / 60)
+            if diff_min < 0:
+                status_txt = f"🔴 <b>Trễ {abs(diff_min)} phút</b> (Lịch: {eta_dt.strftime('%H:%M %d/%m')})"
+            elif diff_min < 60:
+                status_txt = f"🟡 <b>Dự kiến đến sau {diff_min} phút</b> ({eta_dt.strftime('%H:%M')})"
+            else:
+                h = diff_min // 60
+                m = diff_min % 60
+                status_txt = f"🟢 <b>Dự kiến đến sau {h}h{m:02d}</b> ({eta_dt.strftime('%H:%M %d/%m')})"
+        else:
+            status_txt = "⚪ <i>Không có giờ dự kiến (ETA)</i>"
+
+        lines.append(f"<b>{i}. {plate}</b> ({route})\n   {status_txt}\n   Mã: <code>{code}</code>\n")
+        if i >= max_items:
+            lines.append(f"... và còn <b>{len(trips) - max_items} chuyến xe khác</b>.")
+            break
+
+    lines.append("━━━━━━━━━━━━━━━━━━━━")
+    lines.append(f"⏱️ <i>Dữ liệu cập nhật trực tiếp lúc: {now.strftime('%H:%M:%S %d/%m/%Y')}</i>")
+    return "\n".join(lines)
+
 def pre_flight_token_check(shift_name="ca_sang"):
     shift_label = "Ca Sáng (07:00)" if shift_name == "ca_sang" else "Ca Đêm (15:00)"
     shift_key = "precheck_sang" if shift_name == "ca_sang" else "precheck_dem"

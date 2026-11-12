@@ -25,6 +25,11 @@ from notifier import (
 )
 from ai_chat import handle_ai_chat, send_chat_action, set_gemini_key, get_gemini_key, validate_gemini_key
 
+try:
+    from sl_pipeline import get_upcoming_trucks_summary
+except Exception:
+    get_upcoming_trucks_summary = None
+
 PID_FILE = BASE_DIR / "bot.pid"
 
 BOT_STATUS = {
@@ -156,6 +161,7 @@ def handle_command(text: str, chat_id: int, config: dict, sender_name: str = "",
             "🤖 <b>GHN VANTAI DELAY MONITOR & AI BOT</b>\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
             "📌 <b>Các lệnh tra cứu:</b>\n"
+            "🔹 <code>/chuave</code> hoặc <code>/xetruc</code>: Xem danh sách xe đang trên đường về kho KTC Bình Định.\n"
             "🔹 <code>/check</code> hoặc <code>/tre</code>: Kiểm tra danh sách xe đang trễ điểm.\n"
             "🔹 <code>/all</code>: Xem danh sách toàn bộ xe đang chạy.\n"
             "🔹 <code>/status</code>: Xem tình trạng hoạt động và thời hạn Token.\n"
@@ -163,7 +169,7 @@ def handle_command(text: str, chat_id: int, config: dict, sender_name: str = "",
             "🔹 <code>/threshold &lt;phút&gt;</code>: Đổi ngưỡng lọc trễ (Mặc định: 1 phút).\n"
             "🔹 <code>/token &lt;token&gt;</code>: Cập nhật Bearer Token GHN bằng tay.\n\n"
             "💬 <b>Trò chuyện AI như người thật:</b>\n"
-            "🔹 Trong nhóm: Tag <code>@XetreTNG_Bot</code> hoặc <b>Reply</b> tin nhắn của bot để hỏi đáp/tâm sự.\n"
+            "🔹 Trong nhóm: Tag <code>@VanTaiTNGBrain_Bot</code> hoặc <b>Reply</b> tin nhắn của bot để hỏi đáp/tâm sự.\n"
             "🔹 Nhắn tin riêng 1-1 với bot thoải mái mọi lúc mọi nơi.\n"
             "🔹 <code>/ai &lt;câu hỏi&gt;</code>: Gửi câu hỏi nhanh cho AI.\n"
             "🔹 <code>/gemini &lt;API_KEY&gt;</code>: Kết nối bộ não Google Gemini (Miễn phí 100%).\n"
@@ -171,6 +177,14 @@ def handle_command(text: str, chat_id: int, config: dict, sender_name: str = "",
             f"⚙️ <i>Ngưỡng hiện tại: {config.get('DELAY_THRESHOLD_MINUTES', 1)}p | Quét mỗi {config.get('POLL_INTERVAL_SECONDS', 60)}s</i>"
         )
         send_telegram_message(bot_token, chat_id, help_msg, reply_to_message_id=msg_id)
+
+    elif cmd in ("/chuave", "/xetruc", "/xeve"):
+        send_telegram_message(bot_token, chat_id, "⏳ <i>Đang kiểm tra danh sách xe đang trên đường về KTC Bình Định...</i>")
+        if get_upcoming_trucks_summary:
+            summary = get_upcoming_trucks_summary()
+        else:
+            summary = "⚠️ Chức năng tra cứu xe về đang được khởi tạo, sếp thử lại sau 30 giây nhé!"
+        send_telegram_message(bot_token, chat_id, summary)
 
     elif cmd == "/group":
         send_telegram_message(bot_token, chat_id, f"🆔 Chat ID của cuộc trò chuyện này là: <code>{chat_id}</code>")
