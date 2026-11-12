@@ -557,6 +557,7 @@ def extract_packages_for_trips(trips_list, sso_token):
         offset = 0
         limit = 1000
         all_events = []
+        is_last_page = False
 
         while True:
             q_param = json.dumps({"transportationCode": code})
@@ -571,10 +572,12 @@ def extract_packages_for_trips(trips_list, sso_token):
                     data = r.json().get("data", [])
                     if not data:
                         success_fetch = True
+                        is_last_page = True
                         break
                     all_events.extend(data)
                     success_fetch = True
                     if len(data) < limit:
+                        is_last_page = True
                         break
                     offset += limit
                     break
@@ -586,7 +589,7 @@ def extract_packages_for_trips(trips_list, sso_token):
                         continue
                     print(f"[WARN] Lỗi tải TMS history cho {code}: {e_hist}")
                     break
-            if not success_fetch:
+            if not success_fetch or is_last_page:
                 break
 
         if not all_events:
