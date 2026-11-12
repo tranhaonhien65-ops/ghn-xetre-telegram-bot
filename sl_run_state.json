@@ -1,9 +1,11 @@
 {
   "ca_sang": {
-    "date": "2026-11-11",
+    "date": "2026-11-12",
     "status": "completed",
-    "updated_at": "2026-11-11 07:06:00",
-    "note": "Ca Sáng 11/11/2026 đã gửi thành công"
+    "updated_at": "2026-11-12 07:18:47",
+    "started_at": 1794442727.828674,
+    "orders": 2760,
+    "trucks": 2
   },
   "ca_dem": {
     "date": "2026-11-11",
