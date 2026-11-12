@@ -987,13 +987,26 @@ def pre_flight_token_check(shift_name="ca_sang"):
 
     errors = []
     
-    # 1. Tự động làm mới & kiểm tra Metabase JWT
+    # 1. Kiểm tra Token Báo Cáo Metabase (ưu tiên dùng token còn hạn, chỉ làm mới khi sắp hết)
     try:
-        new_jwt = get_metabase_jwt(force_refresh=True)
-        if not new_jwt:
-            errors.append("Không thể lấy Token Báo Cáo Metabase (phiên baocao_session hết hạn).")
+        jwt_tok = get_metabase_jwt(force_refresh=False)
+        if not jwt_tok:
+            errors.append("Không tìm thấy Token Báo Cáo Metabase.")
+        else:
+            # Kiểm tra thời hạn JWT
+            import base64
+            part = jwt_tok.split('.')[1]
+            part += '=' * (-len(part) % 4)
+            pl = json.loads(base64.urlsafe_b64decode(part))
+            exp = pl.get("exp", 0)
+            now_sec = int(time.time())
+            if exp - now_sec <= 0:
+                # Đã hết hạn, thử làm mới tự động qua proxy
+                new_jwt = get_metabase_jwt(force_refresh=True)
+                if not new_jwt:
+                    errors.append(f"Token Báo Cáo Metabase đã hết hạn lúc {datetime.fromtimestamp(exp, VN_TZ).strftime('%H:%M %d/%m')}!")
     except Exception as e:
-        errors.append(f"Lỗi làm mới Metabase Báo Cáo: {e}")
+        errors.append(f"Lỗi kiểm tra Metabase Báo Cáo: {e}")
 
     # 2. Kiểm tra SSO Token
     sso_tok = get_sso_token()
